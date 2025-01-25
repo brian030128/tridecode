@@ -16,3 +16,10 @@ python main.py
 ```
 
 the results will be saved in the `out` folder.
+
+
+## Notes
+Code in reproduction is not ready for production environments, as the trie traversal implementation uses recursive functions, which can lead to stack overflow errors for long outputs.
+A production library is under development and will be released soon.
+
+
