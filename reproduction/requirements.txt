@@ -1,4 +1,4 @@
-git+https://github.com/SpeedReach/transformers.git@main#egg=transformers
+git+https://github.com/brian030128/transformers.git@main#egg=transformers
 torch==2.5.0
 gputil==1.4.0
 datasets==2.19.1
