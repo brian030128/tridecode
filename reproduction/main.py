@@ -149,7 +149,7 @@ parameters = [
 
 
 
-def run_task(task_type: TaskType, data_num: int):
+def run_task(task_type: TaskType, data_num: range):
     match task_type:
         case TaskType.HUMAN_EVAL:
             ds = load_human_eval()
