@@ -1,0 +1,7 @@
+git+https://github.com/SpeedReach/transformers.git@main#egg=transformers
+torch==2.5.0
+gputil==1.4.0
+datasets==2.19.1
+accelerate==0.33.0
+rouge_score==0.1.2
+pynvml==12.0.0
