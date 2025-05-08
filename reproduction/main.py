@@ -173,10 +173,8 @@ def run_task(task: Task, data_num: range):
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
 
-
-
 from task import HumanEvalTask, Gsm8kTask
-run_task(Gsm8kTask(), range(1))
-run_task(HumanEvalTask(),range(1))
+run_task(Gsm8kTask(), range(100))
+run_task(HumanEvalTask(),range(164))
 
 
