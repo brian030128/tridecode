@@ -158,7 +158,7 @@ Solve the math problem.<|end|>
         return self.load_human_eval()
 
     def load_human_eval(self) -> datasets.Dataset:
-        ds = load_dataset("openai/gsm8k", split='test')
+        ds = load_dataset("openai/gsm8k", 'main', split='test')
         ds = ds.map(
             Gsm8kTask.convert_format,
             batched=True
