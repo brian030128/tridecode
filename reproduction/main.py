@@ -158,7 +158,7 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range):
 
 
 def name(type):
-    match model_type:
+    match type:
         case ModelType.LLAMA3:
             return  "meta-llama/Llama-3.1-8B-Instruct"
         case ModelType.PHI35:
