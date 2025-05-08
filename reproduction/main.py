@@ -145,47 +145,38 @@ parameters = [
 
 
 
-def run_task(task_type: TaskType, data_num: range):
-    match task_type:
-        case TaskType.HUMAN_EVAL:
-            ds = load_human_eval()
-        case TaskType.SUM:
-            ds = load_cnn_sum()
-        case TaskType.QASPER:
-            ds = load_qasper()
-        case TaskType.QSUM:
-            ds = load_qsum()
-
+def run_task(task: Task, data_num: range):
     tree_warmup(model, tokenizer, "This is a test", 3, 1000,  [ model.config.eos_token_id ])
 
+    ds = task.get_ds()
     for parameter in parameters:
         if parameter[0] == 1:
             continue
 
-        path = f"out/tree/{task_type.name}"
+        path = f"out/tree/{task.type().name}"
         os.makedirs(path, exist_ok=True)
         print("processing tree ",parameter[0], "_",parameter[1] )
         with open(f"{path}/{parameter[0]}_{parameter[1]}.jsonl", "w") as out_file:
-            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), tree_generate, task_type, model_type, parameter[0], parameter[1])
+            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), tree_generate, task, model_type, parameter[0], parameter[1])
             for metric in metrics:
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
     origin_warmup(model, tokenizer, "This is a test", 3, 1000)
 
     for parameter in parameters:
-        path = f"out/origin/{task_type.name}"
+        path = f"out/origin/{task.type().name}"
         os.makedirs(path, exist_ok=True)
         print("processing origin ",parameter[0], "_",parameter[1] )
         with open(f"{path}/{parameter[0]}_{parameter[1]}.jsonl", "w") as out_file:
-            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), origin_generate, task_type, model_type, parameter[0], parameter[1])
+            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), origin_generate, task, model_type, parameter[0], parameter[1])
             for metric in metrics:
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
 
 
-run_task(TaskType.HUMAN_EVAL,range(164))
 
-run_task(TaskType.SUM, range(200))
+from task import HumanEvalTask, Gsm8kTask
+run_task(Gsm8kTask(), range(1))
+run_task(HumanEvalTask(),range(1))
 
-run_task(TaskType.QSUM, range(90))
 
