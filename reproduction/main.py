@@ -25,22 +25,6 @@ import sys
 os.environ['HF_HOME'] = '/work/u4320956/hf-cache'
 sys.setrecursionlimit(3000)
 
-model_type = ModelType.PHI35
-
-match model_type:
-    case ModelType.LLAMA3:
-        model_name = "meta-llama/Llama-3.1-8B-Instruct"
-    case ModelType.PHI35:
-        model_name = "microsoft/Phi-3.5-mini-instruct"
-    case ModelType.MISTRAL:
-        model_name = "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
-    
-
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    device_map="auto"
-)
 
 
 def convert_cnn_format(d):
@@ -144,8 +128,7 @@ parameters = [
 ]
 
 
-
-def run_task(task: Task, data_num: range):
+def run_task(model_type, model, tokenizer ,task: Task, data_num: range):
     tree_warmup(model, tokenizer, "This is a test", 3, 1000,  [ model.config.eos_token_id ])
 
     ds = task.get_ds()
@@ -153,7 +136,7 @@ def run_task(task: Task, data_num: range):
         if parameter[0] == 1:
             continue
 
-        path = f"out/tree/{task.type().name}"
+        path = f"out/{model_type.name}/tree/{task.type().name}"
         os.makedirs(path, exist_ok=True)
         print("processing tree ",parameter[0], "_",parameter[1] )
         with open(f"{path}/{parameter[0]}_{parameter[1]}.jsonl", "w") as out_file:
@@ -164,7 +147,7 @@ def run_task(task: Task, data_num: range):
     origin_warmup(model, tokenizer, "This is a test", 3, 1000)
 
     for parameter in parameters:
-        path = f"out/origin/{task.type().name}"
+        path = f"out/{model_type.name}/origin/{task.type().name}"
         os.makedirs(path, exist_ok=True)
         print("processing origin ",parameter[0], "_",parameter[1] )
         with open(f"{path}/{parameter[0]}_{parameter[1]}.jsonl", "w") as out_file:
@@ -173,8 +156,25 @@ def run_task(task: Task, data_num: range):
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
 
+model_type = ModelType.PHI35
+
+match model_type:
+    case ModelType.LLAMA3:
+        model_name = "meta-llama/Llama-3.1-8B-Instruct"
+    case ModelType.PHI35:
+        model_name = "microsoft/Phi-3.5-mini-instruct"
+    case ModelType.MISTRAL:
+        model_name = "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+    
+
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map="auto"
+)
+
+
 from task import HumanEvalTask, Gsm8kTask
-run_task(Gsm8kTask(), range(100))
-run_task(HumanEvalTask(),range(164))
-
-
+run_task(model_type,model,tokenizer,Gsm8kTask(), range(100))
+run_task(model_type,model,tokenizer,HumanEvalTask(),range(164))
