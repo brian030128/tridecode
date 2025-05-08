@@ -156,25 +156,29 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range):
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
 
-model_type = ModelType.PHI35
 
-match model_type:
-    case ModelType.LLAMA3:
-        model_name = "meta-llama/Llama-3.1-8B-Instruct"
-    case ModelType.PHI35:
-        model_name = "microsoft/Phi-3.5-mini-instruct"
-    case ModelType.MISTRAL:
-        model_name = "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+def name(type):
+    match model_type:
+        case ModelType.LLAMA3:
+            return  "meta-llama/Llama-3.1-8B-Instruct"
+        case ModelType.PHI35:
+            return "microsoft/Phi-3.5-mini-instruct"
+        case ModelType.MISTRAL:
+            return "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
     
 
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    device_map="auto"
-)
+def test_model(model_type:ModelType):
+    tokenizer = AutoTokenizer.from_pretrained(name(model_type))
+    model = AutoModelForCausalLM.from_pretrained(
+        name(model_type),
+        device_map="auto"
+    )
 
+    from task import HumanEvalTask, Gsm8kTask
+    run_task(model_type,model,tokenizer,Gsm8kTask(), range(100))
+    run_task(model_type,model,tokenizer,HumanEvalTask(),range(164))
 
-from task import HumanEvalTask, Gsm8kTask
-run_task(model_type,model,tokenizer,Gsm8kTask(), range(100))
-run_task(model_type,model,tokenizer,HumanEvalTask(),range(164))
+test_model(ModelType.PHI35)
+test_model(ModelType.LLAMA3)
+
