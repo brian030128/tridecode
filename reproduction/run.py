@@ -2,22 +2,13 @@ from typing import Callable, Tuple, List
 from transformers import LlamaForCausalLM, LlamaTokenizer
 import datasets
 import time
+from task import Task, TaskType
 from tqdm import tqdm
 import torch
 import gc as gpu_gc
 
 from enum import Enum
-
-class TaskType(Enum):
-    SUM = 1
-    HUMAN_EVAL = 2
-    QASPER = 3
-    QSUM = 4
-
-class ModelType(Enum):
-    LLAMA2 = 1
-    PHI35 = 2
-
+from model_type import ModelType
 
 from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex
 from pynvml import nvmlDeviceGetMemoryInfo, nvmlShutdown
@@ -64,15 +55,16 @@ class Metric:
             "output_len": self.output_len,
             "output": self.output
         }
+
     
 from transformers.models import metrics
 
 def run_bench_mark(
-    model: LlamaForCausalLM,
-    tokenizer: LlamaTokenizer,
+    model,
+    tokenizer,
     dataset: datasets.Dataset,
     generate: Callable[[LlamaForCausalLM, LlamaTokenizer, str, int, int, List[int]], Tuple[str, List[int]]],
-    task_type: TaskType,
+    task: Task,
     model_type: ModelType,
     num_beams = 10,
     max_new_tokens = 1000,
@@ -97,52 +89,12 @@ def run_bench_mark(
     
     for i in progress_bar:
         data = dataset[i]
-        if task_type == TaskType.SUM:
-            if model_type == ModelType.LLAMA2:
-                prompt = f"""<s>[INST] <<SYS>>
-You are a helpful assistant.
-<</SYS>>
+        prompt = task.get_prompt(data['text'])
 
-Output summary directly.
-Article:
-{data['text']}
-Summary: [/INST]"""
-            elif model_type == ModelType.PHI35:
-                prompt = f"""<|system|>
-You are a helpful assistant.<|end|>
-<|user|>
-Output summary directly.
-{data['text']}<|end|>
-<|assistant|>"""
-        elif task_type == TaskType.HUMAN_EVAL:
-            if model_type == ModelType.LLAMA2:
-                prompt = f"""<s>[INST] <<SYS>>
-You are a programmer.
-<</SYS>>
-Complete the following function. No explaination is needed, output the code directly.
-{data['text']} [/INST]"""
-            elif model_type == ModelType.PHI35:
-                prompt = f"""<|system|>
-You are a programmer.<|end|>
-<|user|>
-Complete the following function. No explaination is needed, output the code directly.
-{data['text']}<|end|>
-<|assistant|>"""
-        elif task_type == TaskType.QASPER:
-            if model_type == ModelType.PHI35:
-                prompt = f"""<|system|>
-You are a helpful assistant.<|end|>
-<|user|>{data['text']}<|end|>
-<|assistant|>"""
-        elif task_type == TaskType.QSUM:
-            if model_type == ModelType.PHI35:
-                prompt = f"""<|system|>
-You are a helpful assistant.<|end|>
-<|user|>{data['text']}<|end|>
-<|assistant|>"""
         torch.cuda.empty_cache()
         gpu_gc.collect()
         metrics.clear()
+        
         # Update progress bar description with current sample ID
         progress_bar.set_description(f"Processing sample {data['id']}")
         
@@ -153,25 +105,22 @@ You are a helpful assistant.<|end|>
             continue
         start = time.time()
         try:
-            if model_type == ModelType.LLAMA2:
-                output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [ model.config.eos_token_id ])
+            if model_type == ModelType.LLAMA3:
+                output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [model.config.eos_token_id])
+            elif model_type == ModelType.MISTRAL:
+                output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [model.config.eos_token_id])
             elif model_type == ModelType.PHI35:
                 output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens,  [32007, 32001, 32000] )
         except NotImplementedError:
-            #This version of huggingface may produce the exception
-            #Make sure that a `_reorder_cache` function is correctly implemented in transformers.models
-            #We ignore it for now, and hope it'll be fixed in the future
             print("err")
             continue
         completion = tokenizer.decode(output, skip_special_tokens=True)
+        completion = task.extract_answer(completion)
+
         end = time.time()
         print(":", completion)
 
-        score = 0
-        if task_type == TaskType.SUM or task_type == TaskType.QASPER or task_type == TaskType.QSUM:
-            rouge = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
-            score = rouge.score(completion, data['answer'])['rougeL'].fmeasure
-        
+        score = 0        
         
         metric = Metric(
             id=data['id'],

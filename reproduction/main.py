@@ -10,7 +10,9 @@ import json
 
 from origin import origin_generate, origin_warmup, sequential_generate
 from tree_decoding import tree_generate, tree_warmup
-from run import run_bench_mark, TaskType, ModelType
+from run import run_bench_mark
+from task import Task
+from model_type import ModelType
 from transformers import logging
 from run import Metric
 from typing import List
@@ -19,14 +21,20 @@ import os
 logging.set_verbosity_error()
 
 import sys
+
+os.env['HF_HOME'] = '/work/u4320956/hf-cache'
 sys.setrecursionlimit(3000)
 
 model_type = ModelType.PHI35
 
-if model_type == ModelType.LLAMA2:
-    model_name = "meta-llama/Llama-2-7b-chat-hf" 
-elif model_type == ModelType.PHI35:
-    model_name = "microsoft/Phi-3.5-mini-instruct"
+match model_type:
+    case ModelType.LLAMA3:
+        model_name = "meta-llama/Llama-3.1-8B-Instruct"
+    case ModelType.PHI35:
+        model_name = "microsoft/Phi-3.5-mini-instruct"
+    case ModelType.MISTRAL:
+        model_name = "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+    
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(
@@ -42,11 +50,6 @@ def convert_cnn_format(d):
         'answer': d['highlights']
     }
 
-def convert_human_eval_format(d):
-    return {
-        'id': d['task_id'],
-        'text': d['prompt']
-    }
 
 def convert_qasper_format(d):
     texts = []
@@ -94,13 +97,6 @@ def load_cnn_sum() -> datasets.Dataset:
     )
     return ds
 
-def load_human_eval() -> datasets.Dataset:
-    ds = load_dataset("openai_humaneval", split='test')
-    ds = ds.map(
-        convert_human_eval_format,
-        batched=True
-    )
-    return ds
 
 
 def convert_qsum_format(d):
