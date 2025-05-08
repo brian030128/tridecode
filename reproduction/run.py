@@ -89,7 +89,7 @@ def run_bench_mark(
     
     for i in progress_bar:
         data = dataset[i]
-        prompt = task.get_prompt(data['text'])
+        prompt = task.get_prompt(model_type, data['text'])
 
         torch.cuda.empty_cache()
         gpu_gc.collect()
