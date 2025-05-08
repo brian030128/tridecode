@@ -8,7 +8,7 @@ from datasets import load_dataset
 import json
 
 
-from origin import origin_generate, origin_warmup, sequential_generate
+from origin import origin_generate, origin_warmup
 from tree_decoding import tree_generate, tree_warmup
 from run import run_bench_mark
 from task import Task
