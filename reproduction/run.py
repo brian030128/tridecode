@@ -123,8 +123,8 @@ def run_bench_mark(
         score = 0        
         
         metric = Metric(
-            id= data['id'] if data['id'] else "",
-            answer=data['answer'] if data['answer'] else "",
+            id= data['id'] if 'id' in data.keys() else "",
+            answer=data['answer'] if 'answer' in data.keys() else "",
             model_memory=model_memory,
             time_taken=end - start,
             memory_usage=memory_usage,
