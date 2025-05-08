@@ -22,7 +22,7 @@ logging.set_verbosity_error()
 
 import sys
 
-os.env['HF_HOME'] = '/work/u4320956/hf-cache'
+os.environ['HF_HOME'] = '/work/u4320956/hf-cache'
 sys.setrecursionlimit(3000)
 
 model_type = ModelType.PHI35
