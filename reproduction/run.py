@@ -30,10 +30,11 @@ def get_gpu_usage():
 
 class Metric:
 
-    def __init__(self, id: str,model_memory: int, time_taken: float, memory_usage: List[int], time_metric: List[float], score: float, input_len: int,output_len: int, output: str):
+    def __init__(self, id: str, answer: str,model_memory: int, time_taken: float, memory_usage: List[int], time_metric: List[float], score: float, input_len: int,output_len: int, output: str):
         self.model_memory = model_memory
         self.input_kv_memory = memory_usage[0]
         self.id = id
+        self.answer = answer
         self.time_taken = time_taken
         self.memory_usage = memory_usage
         self.time_metric = time_metric
@@ -96,7 +97,6 @@ def run_bench_mark(
         metrics.clear()
         
         # Update progress bar description with current sample ID
-        progress_bar.set_description(f"Processing sample {data['id']}")
         
         model_memory = get_gpu_usage()
 
@@ -123,7 +123,8 @@ def run_bench_mark(
         score = 0        
         
         metric = Metric(
-            id=data['id'],
+            id= data['id'] if data['id'] else "",
+            answer=data['answer'] if data['answer'] else ""
             model_memory=model_memory,
             time_taken=end - start,
             memory_usage=memory_usage,
