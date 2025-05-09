@@ -65,7 +65,7 @@ def name(type):
         case ModelType.PHI35:
             return "microsoft/Phi-3.5-mini-instruct"
         case ModelType.MISTRAL:
-            return "mistralai/Mistral-Small-3.1-24B-Instruct-2503"
+            return "mistralai/Mistral-Small-24B-Instruct-2501"
     
 
 
