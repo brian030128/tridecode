@@ -27,112 +27,13 @@ sys.setrecursionlimit(3000)
 
 
 
-def convert_cnn_format(d):
-    return {
-        'id': d['id'],
-        'text': d['article'],
-        'answer': d['highlights']
-    }
 
 
-def convert_qasper_format(d):
-    texts = []
-    answers = []
-    for full_text in d['full_text']:
-        doc = ""
-        for paragraph in full_text["paragraphs"]:
-            for sentence in paragraph:
-                doc += sentence
-                doc += "\n"
-            doc += "  "
-        texts.append(doc)
-    i = 0
-    for qas in d['qas']:
-        answer = ""
-        for ans in qas["answers"][0]["answer"]:
-            answer = ans["free_form_answer"]
-            if answer != "":
-                break
-        answers.append(answer)
-        print("ans: ", answer)
-    
-        texts[i] = f"""
-    Given the document, please answer the question.
-    Doc:
-    {texts[i]}
-
-    Please answer the following question:
-    {qas["question"][0]}
-    """
-        i += 1
-
-    return {
-        'id': d['id'],
-        'text': texts,
-        'answer': answers
-    }
-
-def load_cnn_sum() -> datasets.Dataset:
-    ds = load_dataset("abisee/cnn_dailymail", "3.0.0", split='train+validation+test')
-    ds = ds.map(
-        convert_cnn_format,
-        batched=True,
-        remove_columns=['article', 'highlights']
-    )
-    return ds
-
-
-
-def convert_qsum_format(d):
-    return {
-        'id': d['id'],
-        'text': d['input'],
-        'answer': d['output']
-    }
-
-def load_qsum() -> datasets.Dataset:
-    ds = load_dataset("pszemraj/qmsum-cleaned", split='train')
-    ds = ds.filter(qsum_filter)
-    ds = ds.map(convert_qsum_format, batched=True)
-    return ds
-
-
-
-def qsum_filter(d):
-    prompt = tokenizer(d['input'], return_tensors="pt").input_ids
-    return prompt.shape[1] < 5000
-
-def qasper_filter(d): 
-    qas = d["qas"]
-    answer = ""
-    for ans in qas["answers"][0]["answer"]:
-        answer = ans["free_form_answer"]
-        if answer != "":
-            break
-    return answer != ""
-
-
-def load_qasper() -> datasets.Dataset:
-    ds = load_dataset("allenai/qasper", split='train')
-    ds = ds.filter( qasper_filter)
-    print(ds)
-    ds = ds.map(convert_qasper_format, batched=True)
-    return ds
-
-# beams / max_tokens
-parameters = [
-    (1, 1000),
-    (3, 1000),
-    (9 , 1000),
-    (15 , 1000),
-]
-
-
-def run_task(model_type, model, tokenizer ,task: Task, data_num: range):
+def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_params, origin_params):
     tree_warmup(model, tokenizer, "This is a test", 3, 1000,  [ model.config.eos_token_id ])
 
     ds = task.get_ds()
-    for parameter in parameters:
+    for parameter in tree_params:
         if parameter[0] == 1:
             continue
 
@@ -146,7 +47,7 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range):
 
     origin_warmup(model, tokenizer, "This is a test", 3, 1000)
 
-    for parameter in parameters:
+    for parameter in origin_params:
         path = f"out/{model_type.name}/origin/{task.type().name}"
         os.makedirs(path, exist_ok=True)
         print("processing origin ",parameter[0], "_",parameter[1] )
@@ -168,7 +69,7 @@ def name(type):
     
 
 
-def test_model(model_type:ModelType):
+def test_model(model_type:ModelType, tree_params, origin_params):
     tokenizer = AutoTokenizer.from_pretrained(name(model_type))
     model = AutoModelForCausalLM.from_pretrained(
         name(model_type),
@@ -176,9 +77,21 @@ def test_model(model_type:ModelType):
     )
 
     from task import HumanEvalTask, Gsm8kTask
-    run_task(model_type,model,tokenizer,Gsm8kTask(), range(100))
-    run_task(model_type,model,tokenizer,HumanEvalTask(),range(164))
+    run_task(model_type,model,tokenizer,Gsm8kTask(), range(100), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,HumanEvalTask(),range(164), tree_params, origin_params)
 
-test_model(ModelType.PHI35)
-test_model(ModelType.LLAMA3)
+
+# beams / max_tokens
+parameters = [
+    (1, 1000),
+    (3, 1000),
+    (9 , 1000),
+    (15 , 1000),
+]
+
+#test_model(ModelType.PHI35)
+test_model(ModelType.LLAMA3, 
+           [(15 , 1000)], parameters)
+
+
 
