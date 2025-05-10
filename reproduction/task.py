@@ -107,10 +107,8 @@ Complete the following function. No explaination is needed, output the code dire
     def type(self) -> TaskType:
         return TaskType.HUMAN_EVAL
 
-    def get_ds(self):
-        return self.load_human_eval()
 
-    def load_human_eval(self) -> datasets.Dataset:
+    def get_ds(self) -> datasets.Dataset:
         ds = load_dataset("openai_humaneval", split='test')
         ds = ds.map(
             HumanEvalTask.convert_human_eval_format,
@@ -154,10 +152,8 @@ Solve the math problem.<|end|>
     def type(self) -> TaskType:
         return TaskType.GSM8K
 
-    def get_ds(self):
-        return self.load_human_eval()
 
-    def load_human_eval(self) -> datasets.Dataset:
+    def get_ds(self) -> datasets.Dataset:
         ds = load_dataset("openai/gsm8k", 'main', split='test')
         ds = ds.map(
             Gsm8kTask.convert_format,

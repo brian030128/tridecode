@@ -54,7 +54,8 @@ class Metric:
             "score": self.score,
             "input_len": self.input_len,
             "output_len": self.output_len,
-            "output": self.output
+            "output": self.output,
+            "answer": self.answer
         }
 
     
