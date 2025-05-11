@@ -8,6 +8,7 @@ from datasets import load_dataset
 class TaskType(Enum):
     HUMAN_EVAL = 1
     GSM8K = 2
+    CNN = 3 
 
 
 class Task:
@@ -41,6 +42,8 @@ def get_task(type: TaskType) -> Task:
             return HumanEvalTask()
         case TaskType.GSM8K:
             return Gsm8kTask()
+        case TaskType.CNN:
+            return CNNSumTask()
         
     
 
@@ -169,3 +172,100 @@ Solve the math problem.<|end|>
         }
 
 
+class Gsm8kTask(Task):
+
+    def llama3(self, prompt) -> str:
+        return f"""<|start_header_id|>system<|end_header_id|>
+                Solve the math problem.
+                <|eot_id|><|start_header_id|>user<|end_header_id|>
+{prompt}
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                """
+    def mistral(self, prompt) -> str:
+        return f"""
+                <s>[SYSTEM_PROMPT]Solve the math problem.[/SYSTEM_PROMPT][INST]
+                {prompt}[/INST]
+            """
+    
+    def phi(self, prompt) -> str:
+        return f"""<|system|>
+Solve the math problem.<|end|>
+<|user|>
+{prompt}<|end|>
+<|assistant|>"""
+
+    def extract_answer(self, text) -> str:
+        return text
+    
+    def type(self) -> TaskType:
+        return TaskType.GSM8K
+
+
+    def get_ds(self) -> datasets.Dataset:
+        ds = load_dataset("openai/gsm8k", 'main', split='test')
+        ds = ds.map(
+            Gsm8kTask.convert_format,
+            batched=True
+        )
+        return ds
+
+    @staticmethod
+    def convert_format(d):
+        return {
+            'text': d['question'],
+            'answer': d['answer']
+        }
+
+
+
+class CNNSumTask:
+    def llama3(self, prompt) -> str:
+        return f"""<|start_header_id|>system<|end_header_id|>
+                Output the highlight of the news.
+                <|eot_id|><|start_header_id|>user<|end_header_id|>
+{prompt}
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                """
+    def mistral(self, prompt) -> str:
+        return f"""
+                <s>[SYSTEM_PROMPT]Output the highlight of the news.[/SYSTEM_PROMPT][INST]
+                {prompt}[/INST]
+            """
+    
+    def phi(self, prompt) -> str:
+        return f"""<|system|>
+Output the highlight of the news.<|end|>
+<|user|>
+{prompt}<|end|>
+<|assistant|>"""
+    def get_prompt(self, model: ModelType, prompt: str) -> str:
+        match model:
+            case ModelType.PHI35:
+                return self.phi(prompt)
+            case ModelType.LLAMA3:
+                return self.llama3(prompt)
+            case ModelType.MISTRAL:
+                return self.mistral(prompt)
+            
+    def extract_answer(self, text) -> str:
+        return text
+
+    def type(self) -> TaskType:
+        return TaskType.CNN
+
+    @staticmethod
+    def convert_format(d):
+        return {
+            'id': d['id'],
+            'text': d['article'],
+            'answer': d['highlights']
+        }
+
+    def get_ds():
+        ds = load_dataset("abisee/cnn_dailymail", "3.0.0", split='train+validation+test')
+        ds = ds.map(
+            CNNSumTask.convert_format,
+            batched=True,
+            remove_columns=['article', 'highlights']
+        )
+        return ds
