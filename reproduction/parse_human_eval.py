@@ -62,5 +62,5 @@ for model in source.keys():
         for file_name in source[model][decode_type]:
             in_dir = f'out/{model}/{decode_type}/HUMAN_EVAL'
             out_dir = f'tmp_out/{model}/{decode_type}/HUMAN_EVAL'
-            os.make_dirs(out_dir, exists_ok=True)
+            os.makedirs(out_dir, exists_ok=True)
             parse(in_dir, out_dir)
