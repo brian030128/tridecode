@@ -33,7 +33,7 @@ class Task:
     def type(self) -> TaskType:
         pass
 
-    def get_ds():
+    def get_ds(self):
         pass
 
 def get_task(type: TaskType) -> Task:
@@ -261,7 +261,7 @@ Output the highlight of the news.<|end|>
             'answer': d['highlights']
         }
 
-    def get_ds():
+    def get_ds(self):
         ds = load_dataset("abisee/cnn_dailymail", "3.0.0", split='train+validation+test')
         ds = ds.map(
             CNNSumTask.convert_format,
