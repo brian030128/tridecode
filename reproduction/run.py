@@ -121,7 +121,10 @@ def run_bench_mark(
         end = time.time()
         print(":", completion)
 
-        score = 0        
+        score = 0
+        if task.type() == TaskType.CNN:
+            rouge = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+            score = rouge.score(completion, data['answer'])['rougeL'].fmeasure
         
         metric = Metric(
             id= data['id'] if 'id' in data.keys() else "",
