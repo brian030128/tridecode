@@ -1,5 +1,7 @@
 import os
 import json
+import subprocess
+
 
 
 source = {
@@ -64,3 +66,32 @@ for model in source.keys():
             out_dir = f'tmp_out/{model}/{decode_type}/HUMAN_EVAL'
             os.makedirs(out_dir, exist_ok=True)
             parse(in_dir, out_dir)
+for model in source.keys():
+    for decode_type in source[model].keys():
+        for file_name in source[model][decode_type]:
+            file = f'tmp_out/{model}/{decode_type}/HUMAN_EVAL/{file_name}'
+            subprocess.run(["evaluate_functional_correctness",  f'tmp_out/{model}/{decode_type}/HUMAN_EVAL/{file_name}']) 
+
+
+for model in source.keys():
+    for decode_type in source[model].keys():
+        for file_name in source[model][decode_type]:
+                in_1_path = f"out/{model}/{decode_type}/GSM8K/{file_name}"
+                in_2_path = f'tmp_out/{model}/{decode_type}/HUMAN_EVAL/{file_name}'
+                o_path = f"final_out/{model}/{decode_type}/GSM8K/{file_name}"
+                os.makedirs(f'final_out/{model}/{decode_type}/GSM8K/', exist_ok=True)
+                entries = []
+                scores = []
+                with open(in_2_path, 'r') as f:
+                    for idx, line in enumerate(f):
+                        obj = json.loads(line)
+                        scores.append(1 if obj["passed"] else 0)
+                with open(in_1_path, 'r') as f:
+                    for idx, line in enumerate(f):
+                        obj = json.loads(line)
+                        obj['score'] = scores[idx]
+                        entries.append(obj)
+                
+                with open(o_path, 'w') as f:
+                    for entry in entries:
+                        f.write(json.dumps(entry) + '\n')
