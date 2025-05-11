@@ -77,7 +77,7 @@ for model in source.keys():
     for decode_type in source[model].keys():
         for file_name in source[model][decode_type]:
             in_1_path = f"out/{model}/{decode_type}/HUMAN_EVAL/{file_name}"
-            in_2_path = f'tmp_out/{model}/{decode_type}/HUMAN_EVAL/{file_name}'
+            in_2_path = f'tmp_out/{model}/{decode_type}/HUMAN_EVAL/{file_name}_results.jsonl'
             o_path = f"final_out/{model}/{decode_type}/HUMAN_EVAL/{file_name}"
             os.makedirs(f'final_out/{model}/{decode_type}/HUMAN_EVAL/', exist_ok=True)
             entries = []
