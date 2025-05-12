@@ -295,6 +295,9 @@ Translate the following text to english directly.<|end|>
 
     @staticmethod
     def convert_format(d):
+        for entry in d:
+            print(entry)
+            exit(0)
         obj = json.loads(d)["translation"]
         print(obj[0])
         return {
