@@ -122,7 +122,7 @@ def run_bench_mark(
         print(":", completion)
 
         score = 0
-        if task.type() == TaskType.CNN:
+        if task.type() == TaskType.CNN or task.type() == TaskType.WMT:
             rouge = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
             score = rouge.score(completion, data['answer'])['rougeL'].fmeasure
         
