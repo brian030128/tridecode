@@ -296,6 +296,8 @@ Translate the following text to english directly.<|end|>
     @staticmethod
     def convert_format(d):
         obj = d["translation"]
+        print(obj)
+        exit(0)
         return {
             'id': "",
             'text': obj['de'],
