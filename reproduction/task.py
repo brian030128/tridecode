@@ -295,13 +295,7 @@ Translate the following text to english directly.<|end|>
 
     @staticmethod
     def convert_format(d):
-        i = 0
-        for entry in d:
-            print(entry)
-            i += 1
-            if i > 3:
-                exit(0)
-        obj = json.loads(d["translation"])
+        obj = d["translation"]
         print(obj[0])
         return {
             'id': "",
