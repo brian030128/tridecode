@@ -265,7 +265,7 @@ Output the highlight of the news.<|end|>
         return ds
     
 
-class WMTTransTask:
+class WMTTransTask(Task):
     def llama3(self, prompt) -> str:
         return f"""<|start_header_id|>system<|end_header_id|>
                 Translate the following text to english directly.
