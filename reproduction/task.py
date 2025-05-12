@@ -295,7 +295,8 @@ Translate the following text to english directly.<|end|>
 
     @staticmethod
     def convert_format(d):
-        
+        for entry in d:
+            print(entry)
         d = [json.loads(entry) for entry in d]
         return {
             'id': "",
