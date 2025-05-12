@@ -295,7 +295,8 @@ Translate the following text to english directly.<|end|>
 
     @staticmethod
     def convert_format(d):
-        d = json.loads(d['translation'])
+        
+        d = [json.loads(entry['translation']) for entry in d]
         return {
             'id': "",
             'text': d['de'],
