@@ -295,13 +295,12 @@ Translate the following text to english directly.<|end|>
 
     @staticmethod
     def convert_format(d):
-        for entry in d:
-            print(entry)
-        d = [json.loads(entry) for entry in d]
+        obj = json.loads(d)["translation"]
+        print(obj[0])
         return {
             'id': "",
-            'text': d['de'],
-            'answer': d['en']
+            'text': obj['de'],
+            'answer': obj['en']
         }
 
     def get_ds(self):
