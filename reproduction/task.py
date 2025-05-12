@@ -220,7 +220,7 @@ Solve the math problem.<|end|>
 
 
 
-class CNNSumTask:
+class CNNSumTask(Task):
     def llama3(self, prompt) -> str:
         return f"""<|start_header_id|>system<|end_header_id|>
                 Output the highlight of the news.
