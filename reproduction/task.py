@@ -301,7 +301,7 @@ Translate the following text to english directly.<|end|>
             i += 1
             if i > 3:
                 exit(0)
-        obj = json.loads(d)["translation"]
+        obj = json.loads(d["translation"])
         print(obj[0])
         return {
             'id': "",
