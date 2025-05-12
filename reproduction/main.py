@@ -76,10 +76,11 @@ def test_model(model_type:ModelType, tree_params, origin_params):
         device_map="auto"
     )
 
-    from task import HumanEvalTask, Gsm8kTask,CNNSumTask
+    from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask
     #run_task(model_type,model,tokenizer,Gsm8kTask(), range(100), tree_params, origin_params)
     #run_task(model_type,model,tokenizer,HumanEvalTask(),range(164), tree_params, origin_params)
-    run_task(model_type,model,tokenizer,CNNSumTask(),range(100), tree_params, origin_params)
+    #run_task(model_type,model,tokenizer,CNNSumTask(),range(100), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,WMTTransTask(),range(100), tree_params, origin_params)
 
 
 # beams / max_tokens
@@ -89,10 +90,8 @@ parameters = [
     (9 , 1000)
 ]
 
-test_model(ModelType.PHI35, [], [
-    (9 , 1000)
-])
-test_model(ModelType.LLAMA3, parameters, parameters)
+test_model(ModelType.PHI35, parameters, parameters)
+#test_model(ModelType.LLAMA3, parameters, parameters)
 # test_model(ModelType.MISTRAL, 
 #            [(3, 1000), (6, 1000)],
 #            [(1, 1000),(3, 1000), (6, 1000)])

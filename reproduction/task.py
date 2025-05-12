@@ -1,6 +1,7 @@
 from model_type import ModelType
 
 from enum import Enum
+import json
 
 import datasets
 from datasets import load_dataset
@@ -8,7 +9,8 @@ from datasets import load_dataset
 class TaskType(Enum):
     HUMAN_EVAL = 1
     GSM8K = 2
-    CNN = 3 
+    CNN = 3
+    WMT = 4
 
 
 class Task:
@@ -238,14 +240,6 @@ Output the highlight of the news.<|end|>
 <|user|>
 {prompt}<|end|>
 <|assistant|>"""
-    def get_prompt(self, model: ModelType, prompt: str) -> str:
-        match model:
-            case ModelType.PHI35:
-                return self.phi(prompt)
-            case ModelType.LLAMA3:
-                return self.llama3(prompt)
-            case ModelType.MISTRAL:
-                return self.mistral(prompt)
             
     def extract_answer(self, text) -> str:
         return text
@@ -269,3 +263,51 @@ Output the highlight of the news.<|end|>
             remove_columns=['article', 'highlights']
         )
         return ds
+    
+
+class WMTTransTask:
+    def llama3(self, prompt) -> str:
+        return f"""<|start_header_id|>system<|end_header_id|>
+                Translate the following text to english directly.
+                <|eot_id|><|start_header_id|>user<|end_header_id|>
+{prompt}
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                """
+    def mistral(self, prompt) -> str:
+        return f"""
+                <s>[SYSTEM_PROMPT]Translate the following text to english directly.[/SYSTEM_PROMPT][INST]
+                {prompt}[/INST]
+            """
+    
+    def phi(self, prompt) -> str:
+        return f"""<|system|>
+Translate the following text to english directly.<|end|>
+<|user|>
+{prompt}<|end|>
+<|assistant|>"""
+            
+    def extract_answer(self, text) -> str:
+        return text.strip()
+
+    def type(self) -> TaskType:
+        return TaskType.WMT
+
+
+    @staticmethod
+    def convert_format(d):
+        d = json.loads(d['translation'])
+        return {
+            'id': "",
+            'text': d['de'],
+            'answer': d['en']
+        }
+
+    def get_ds(self):
+        ds = load_dataset("wmt/wmt_t2t", split='train')
+        ds = ds.map(
+            WMTTransTask.convert_format,
+            batched=True,
+            remove_columns=['article', 'highlights']
+        )
+        return ds
+
