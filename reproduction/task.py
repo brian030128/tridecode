@@ -303,7 +303,7 @@ Translate the following text to english directly.<|end|>
         }
 
     def get_ds(self):
-        ds = load_dataset("wmt/wmt_t2t", split='train')[:1000]
+        ds = load_dataset("wmt/wmt_t2t", split='train')
         ds = ds.map(
             WMTTransTask.convert_format,
             batched=True
