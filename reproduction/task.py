@@ -296,12 +296,10 @@ Translate the following text to english directly.<|end|>
     @staticmethod
     def convert_format(d):
         obj = d["translation"]
-        print(obj[0])
-        exit(0)
         return {
             'id': "",
-            'text': obj['de'],
-            'answer': obj['en']
+            'text': [x['de'] for x in obj],
+            'answer':[x['en'] for x in obj]
         }
 
     def get_ds(self):
