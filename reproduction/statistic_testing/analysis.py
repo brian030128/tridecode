@@ -15,8 +15,11 @@ def _is_binary(series: pd.Series) -> bool:
     vals = series.dropna().unique()
     if len(vals) == 0:
         return False
-    # cast to int so that True/False become 1/0
-    return set(vals.astype(int)) <= {0, 1}
+
+    # Turn numpy scalars into native Python, then check membership
+    py_vals = {v.item() if hasattr(v, "item") else v for v in vals}
+
+    return py_vals.issubset({0, 1, True, False})
 
 def _paired_t_with_ci(x: pd.Series, y: pd.Series, prefix: str, results: dict) -> None:
     """Helper: paired t-test + 95 % CI on y-x and means."""
@@ -64,26 +67,50 @@ def analyze_pair(orig_path: str, tree_path: str) -> dict:
     score_o, score_t = df_o['score'], df_t['score']
 
     if _is_binary(score_o) and _is_binary(score_t):
-        # Binary case McNemar
+        # Discordant pairs
         b = ((score_o == 1) & (score_t == 0)).sum()
         c = ((score_o == 0) & (score_t == 1)).sum()
-        table      = [[0, b], [c, 0]]
-        tbl2x2     = Table2x2(table)
-        mc_res     = mcnemar(table, exact=False)
 
-        or_low,  or_high  = tbl2x2.oddsratio_confint()
-        rd_low,  rd_high  = tbl2x2.riskratio_confint()
+        results['mcnemar_b'] = b
+        results['mcnemar_c'] = c
 
-        results.update({
-            'mcnemar_b': b,
-            'mcnemar_c': c,
-            'mcnemar_stat': mc_res.statistic,
-            'mcnemar_pval': mc_res.pvalue,
-            'mcnemar_or_ci_low':  or_low,
-            'mcnemar_or_ci_high': or_high,
-            'mcnemar_rd_ci_low':  rd_low,
-            'mcnemar_rd_ci_high': rd_high
-        })
+        # If there are no discordant pairs, McNemar is undefined:
+        if b + c == 0:
+            results.update({
+                'mcnemar_stat': 0.0,     # no change
+                'mcnemar_pval': 1.0,     # no evidence of difference
+                'mcnemar_or_ci_low': float('nan'),
+                'mcnemar_or_ci_high': float('nan'),
+                # if you still want the paired-diff CI:
+                'mcnemar_diff_ci_low': float('nan'),
+                'mcnemar_diff_ci_high': float('nan'),
+            })
+        else:
+            # Build full table for odds‐ratio CI
+            n00 = ((score_o == 0) & (score_t == 0)).sum()
+            n11 = ((score_o == 1) & (score_t == 1)).sum()
+            table = [[n00, c],
+                     [b,   n11]]
+
+            # McNemar's χ² (with continuity correction by default)
+            mc_res = mcnemar(table, exact=False, correction=True)
+
+            # Odds‐ratio CI (paired)
+            tbl2x2 = Table2x2(table)
+            or_low, or_high = tbl2x2.oddsratio_confint()
+
+            # Optional: CI on the paired difference in proportions
+            diff = (score_t - score_o).dropna()
+            diff_low, diff_high = DescrStatsW(diff).tconfint_mean()
+
+            results.update({
+                'mcnemar_stat':      mc_res.statistic,
+                'mcnemar_pval':      mc_res.pvalue,
+                'mcnemar_or_ci_low': or_low,
+                'mcnemar_or_ci_high':or_high,
+                'mcnemar_diff_ci_low':  diff_low,
+                'mcnemar_diff_ci_high': diff_high,
+            })
     else:
         # Continuous score paired t-test
         _paired_t_with_ci(score_o.astype(float), score_t.astype(float), 'score', results)

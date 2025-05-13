@@ -1,83 +1,102 @@
-import sys
-import pandas as pd
+#!/usr/bin/env python3
 import argparse
-ALPHA = 0.05 # significance level
+import pandas as pd
+
+ALPHA = 0.05
 
 def verdict(row, metric, higher_is_better=True):
-    diff   = row[f"{metric}_diff_mean"]
-    pval   = row[f"{metric}_t_pval"]
+    diff = row.get(f"{metric}_diff_mean", float("nan"))
+    pval = row.get(f"{metric}_t_pval", float("nan"))
     if pd.isna(diff) or pd.isna(pval):
-        return "n/a"               # metric not present
+        return "n/a"
     if pval >= ALPHA:
         return "no_sig"
-    if higher_is_better:
-        return "better" if diff > 0 else "worse"
-    else:                          # lower is better
-        return "better" if diff < 0 else "worse"
+    return "better" if (diff > 0) == higher_is_better else "worse"
 
 def verdict_binary(row):
-    if pd.isna(row.get("mcnemar_pval")):
+    b = row.get("mcnemar_b", float("nan"))
+    c = row.get("mcnemar_c", float("nan"))
+    pval = row.get("mcnemar_pval", float("nan"))
+    if pd.isna(b) or pd.isna(c) or pd.isna(pval):
         return "n/a"
-    if row["mcnemar_pval"] >= ALPHA:
+    if pval >= ALPHA:
         return "no_sig"
-    return "better" if row["mcnemar_c"] > row["mcnemar_b"] else "worse"
 
-def main(in_csv, out_csv):
-    df = pd.read_csv(in_csv)
+    return "better" if c > b else "worse"
 
+def simplify(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for _, r in df.iterrows():
-        base = {
-            "model"  : r["model"],
+        common = {
+            "model":   r["model"],
             "dataset": r["dataset"],
-            "beam"   : r["beam"],
+            "beam":    r["beam"],
             "samples": r["samples"],
         }
 
-        for metric, higher_is_better in [
-            ("tok_per_sec",  True),   # faster is better
-            ("input_kv_memory", False)  # less memory is better
-        ]:
-            if f"{metric}_diff_mean" in r:
-                rows.append({
-                    **base,
-                    "metric" : metric,
-                    "verdict": verdict(r, metric, higher_is_better),
-                    "ci_low" : r[f"{metric}_ci_lower"],
-                    "ci_high": r[f"{metric}_ci_upper"],
-                })
+        # input_kv_memory (lower is better)
+        rows.append({
+            **common,
+            "metric":  "input_kv_memory",
+            "verdict": verdict(r, "input_kv_memory", higher_is_better=False),
+            "ci_lower": r.get("input_kv_memory_ci_lower", ""),
+            "ci_upper": r.get("input_kv_memory_ci_upper", ""),
+        })
 
-        if "score_t_pval" in r:                    
+        # tok_per_sec (higher is better)
+        rows.append({
+            **common,
+            "metric":  "tok_per_sec",
+            "verdict": verdict(r, "tok_per_sec", higher_is_better=True),
+            "ci_lower": r.get("tok_per_sec_ci_lower", ""),
+            "ci_upper": r.get("tok_per_sec_ci_upper", ""),
+        })
+
+        # score
+        if "mcnemar_pval" in r and not pd.isna(r["mcnemar_pval"]):
+            # binary case: use odds‐ratio CI
             rows.append({
-                **base,
-                "metric" : "score",
-                "verdict": verdict(r, "score", higher_is_better=True),
-                "ci_low" : r["score_ci_lower"],
-                "ci_high": r["score_ci_upper"],
-            })
-        elif "mcnemar_pval" in r:                
-            rows.append({
-                **base,
-                "metric" : "score (binary)",
+                **common,
+                "metric":  "score",
                 "verdict": verdict_binary(r),
-                "ci_low" : r["mcnemar_rd_ci_low"],
-                "ci_high": r["mcnemar_rd_ci_high"],
+                "ci_lower": r.get("mcnemar_or_ci_low", ""),
+                "ci_upper": r.get("mcnemar_or_ci_high", ""),
+            })
+        else:
+            # continuous case: paired‐t
+            rows.append({
+                **common,
+                "metric":  "score",
+                "verdict": verdict(r, "score", higher_is_better=True),
+                "ci_lower": r.get("score_ci_lower", ""),
+                "ci_upper": r.get("score_ci_upper", ""),
             })
 
-    out = pd.DataFrame(rows)
-    out = out[["model", "dataset", "beam", "metric", "verdict", "ci_low", "ci_high"]]
-    out.to_csv(out_csv, index=False)
-    print(f"Simplified results written to {out_csv}")
+    return pd.DataFrame(rows)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Simplify and summarize results.")
-    parser.add_argument("--source", required=True)
-    parser.add_argument("--output_csv", required=True)
+def main():
+    parser = argparse.ArgumentParser(
+        description="Simplify a detailed beam-search comparison CSV into verdict + CI only"
+    )
+    parser.add_argument(
+        "detailed_csv",
+        help="Path to the detailed results CSV (with _diff_mean, _ci_lower, mcnemar_*, etc.)"
+    )
+    parser.add_argument(
+        "simplified_csv",
+        help="Output path for the simplified CSV"
+    )
     args = parser.parse_args()
 
-    main(args.source, args.output_csv)
+    df = pd.read_csv(args.detailed_csv)
+    simple = simplify(df)
+    simple.to_csv(args.simplified_csv, index=False)
+    print(f"Simplified CSV written to {args.simplified_csv}")
+
+if __name__ == "__main__":
+    main()
 
     """
     Example usage:
-    python -m reproduction.statistic_testing.simplify_stats --source reproduction/statistic_testing_results.csv --output_csv reproduction/simplified_results.csv
+    python -m reproduction.statistic_testing.simplify_stats reproduction/statistic_testing_results.csv reproduction/simplified_results.csv
     """
