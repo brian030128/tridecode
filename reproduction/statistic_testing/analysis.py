@@ -8,6 +8,29 @@ from scipy.stats import ttest_rel
 from statsmodels.stats.weightstats import DescrStatsW
 from statsmodels.stats.contingency_tables import mcnemar
 from statsmodels.stats.contingency_tables import Table2x2
+from typing import Tuple
+
+def _is_binary(series: pd.Series) -> bool:
+    """True if the non-NaN values are a subset of {0,1} (or True/False)."""
+    vals = series.dropna().unique()
+    if len(vals) == 0:
+        return False
+    # cast to int so that True/False become 1/0
+    return set(vals.astype(int)) <= {0, 1}
+
+def _paired_t_with_ci(x: pd.Series, y: pd.Series, prefix: str, results: dict) -> None:
+    """Helper: paired t-test + 95 % CI on y-x and means."""
+    stat, pval = ttest_rel(x, y, nan_policy='omit')
+    results[f'{prefix}_orig_mean'] = m1 = x.mean()
+    results[f'{prefix}_tree_mean'] = m2 = y.mean()
+    results[f'{prefix}_t_stat']    = stat
+    results[f'{prefix}_t_pval']    = pval
+
+    diff = (y - x).dropna()
+    ci_low, ci_high = DescrStatsW(diff).tconfint_mean(alpha=0.05)
+    results[f'{prefix}_diff_mean'] = diff.mean()
+    results[f'{prefix}_ci_lower']  = ci_low
+    results[f'{prefix}_ci_upper']  = ci_high
 
 def load_jsonl(path):
     with open(path, 'r') as f:
@@ -24,62 +47,47 @@ def compute_tok_per_sec(df):
     return df.apply(calc, axis=1)
 
 
-def analyze_pair(orig_path, tree_path):
-    """Perform paired t-tests on time_taken and input_kv_memory, and McNemar's test on score."""
+def analyze_pair(orig_path: str, tree_path: str) -> dict:
+    """Compare one orig vs tree file pair and return a dict of statistics."""
     df_o = load_jsonl(orig_path)
     df_t = load_jsonl(tree_path)
     assert len(df_o) == len(df_t), f"Sample count mismatch: {orig_path} vs {tree_path}"
 
-    # Recompute time_taken using time_metrics and output length
     df_o['tok_per_sec'] = compute_tok_per_sec(df_o)
     df_t['tok_per_sec'] = compute_tok_per_sec(df_t)
 
     results = {}
-    # 1) Paired t-test on continuous metrics
+
     for metric in ['input_kv_memory', 'tok_per_sec']:
-        x = df_o[metric]
-        y = df_t[metric]
-        stat, pval = ttest_rel(x, y, nan_policy='omit')
-        results[f'{metric}_orig_mean'] = x.mean()
-        results[f'{metric}_tree_mean'] = y.mean()
-        results[f'{metric}_t_stat'] = stat
-        results[f'{metric}_t_pval'] = pval
+        _paired_t_with_ci(df_o[metric], df_t[metric], metric, results)
 
-    # 2) 95% CI on the *difference* (tree - orig)
-    diff = (y - x).dropna()
-    ds = DescrStatsW(diff)
-    ci_low, ci_high = ds.tconfint_mean(alpha=0.05)
-    results[f'{metric}_diff_mean']    = diff.mean()
-    results[f'{metric}_ci_lower']     = ci_low
-    results[f'{metric}_ci_upper']     = ci_high
-    
-    # 3) McNemar's test on binary score
-    orig_scores = df_o['score'].astype(int)
-    tree_scores = df_t['score'].astype(int)
-    b = ((orig_scores == 1) & (tree_scores == 0)).sum()
-    c = ((orig_scores == 0) & (tree_scores == 1)).sum()
-    
-    table = [[0, b], [c, 0]]
-    tbl   = Table2x2(table)
-    
-    m_result = mcnemar(table, exact=False)
+    score_o, score_t = df_o['score'], df_t['score']
 
-    # 95% CI for the odds‐ratio (tree vs orig)
-    or_low, or_high = tbl.oddsratio_confint()
+    if _is_binary(score_o) and _is_binary(score_t):
+        # Binary case McNemar
+        b = ((score_o == 1) & (score_t == 0)).sum()
+        c = ((score_o == 0) & (score_t == 1)).sum()
+        table      = [[0, b], [c, 0]]
+        tbl2x2     = Table2x2(table)
+        mc_res     = mcnemar(table, exact=False)
 
-    # 95% CI for the risk difference P(tree=1)−P(orig=1)
-    rd_low, rd_high = tbl.riskratio_confint()
+        or_low,  or_high  = tbl2x2.oddsratio_confint()
+        rd_low,  rd_high  = tbl2x2.riskratio_confint()
 
-    results.update({
-        'mcnemar_b': b,
-        'mcnemar_c': c,
-        'mcnemar_stat': m_result.statistic,
-        'mcnemar_pval': m_result.pvalue,
-        'mcnemar_or_ci_low':  or_low,
-        'mcnemar_or_ci_high': or_high,
-        'mcnemar_rd_ci_low':  rd_low,
-        'mcnemar_rd_ci_high': rd_high
-    })
+        results.update({
+            'mcnemar_b': b,
+            'mcnemar_c': c,
+            'mcnemar_stat': mc_res.statistic,
+            'mcnemar_pval': mc_res.pvalue,
+            'mcnemar_or_ci_low':  or_low,
+            'mcnemar_or_ci_high': or_high,
+            'mcnemar_rd_ci_low':  rd_low,
+            'mcnemar_rd_ci_high': rd_high
+        })
+    else:
+        # Continuous score paired t-test
+        _paired_t_with_ci(score_o.astype(float), score_t.astype(float), 'score', results)
+
     return results
 
 def main(base_dir, output_csv):
