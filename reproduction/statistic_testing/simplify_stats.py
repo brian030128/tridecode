@@ -21,8 +21,16 @@ def verdict_binary(row):
         return "n/a"
     if pval >= ALPHA:
         return "no_sig"
-
     return "better" if c > b else "worse"
+
+def compute_margin(ci_low, ci_high):
+    """Compute half-width of a confidence interval."""
+    try:
+        low = float(ci_low)
+        high = float(ci_high)
+        return (high - low) / 2
+    except Exception:
+        return ""
 
 def simplify(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
@@ -34,58 +42,83 @@ def simplify(df: pd.DataFrame) -> pd.DataFrame:
             "samples": r["samples"],
         }
 
-        # input_kv_memory (lower is better)
+        # 1) input_kv_memory (paired t‐test, lower is better)
+        metric = "input_kv_memory"
+        ci_l = r.get(f"{metric}_ci_lower", "")
+        ci_u = r.get(f"{metric}_ci_upper", "")
         rows.append({
             **common,
-            "metric":  "input_kv_memory",
-            "verdict": verdict(r, "input_kv_memory", higher_is_better=False),
-            "ci_lower": r.get("input_kv_memory_ci_lower", ""),
-            "ci_upper": r.get("input_kv_memory_ci_upper", ""),
+            "metric":       metric,
+            "origin_mean":  r.get(f"{metric}_orig_mean", ""),
+            "tree_mean":    r.get(f"{metric}_tree_mean", ""),
+            "margin":       compute_margin(ci_l, ci_u),
+            "verdict":      verdict(r, metric, higher_is_better=False),
+            "p_value":      r.get(f"{metric}_t_pval", ""),
+            "test":         "paired t-test",
+            "ci_lower":     ci_l,
+            "ci_upper":     ci_u,
         })
 
-        # tok_per_sec (higher is better)
+        # 2) tok_per_sec (paired t‐test, higher is better)
+        metric = "tok_per_sec"
+        ci_l = r.get(f"{metric}_ci_lower", "")
+        ci_u = r.get(f"{metric}_ci_upper", "")
         rows.append({
             **common,
-            "metric":  "tok_per_sec",
-            "verdict": verdict(r, "tok_per_sec", higher_is_better=True),
-            "ci_lower": r.get("tok_per_sec_ci_lower", ""),
-            "ci_upper": r.get("tok_per_sec_ci_upper", ""),
+            "metric":       metric,
+            "origin_mean":  r.get(f"{metric}_orig_mean", ""),
+            "tree_mean":    r.get(f"{metric}_tree_mean", ""),
+            "margin":       compute_margin(ci_l, ci_u),
+            "verdict":      verdict(r, metric, higher_is_better=True),
+            "p_value":      r.get(f"{metric}_t_pval", ""),
+            "test":         "paired t-test",
+            "ci_lower":     ci_l,
+            "ci_upper":     ci_u,
         })
 
-        # score
-        if "mcnemar_pval" in r and not pd.isna(r["mcnemar_pval"]):
-            # binary case: use odds‐ratio CI
+        # 3) score: choose McNemar for binary, paired‐t for continuous
+        if not pd.isna(r.get("mcnemar_pval")):
+            # binary
+            ci_l = r.get("mcnemar_or_ci_low", "")
+            ci_u = r.get("mcnemar_or_ci_high", "")
             rows.append({
                 **common,
-                "metric":  "score",
-                "verdict": verdict_binary(r),
-                "ci_lower": r.get("mcnemar_or_ci_low", ""),
-                "ci_upper": r.get("mcnemar_or_ci_high", ""),
+                "metric":       "score",
+                "origin_mean":  r.get("score_orig_mean", ""),
+                "tree_mean":    r.get("score_tree_mean", ""),
+                "margin":       compute_margin(ci_l, ci_u),
+                "verdict":      verdict_binary(r),
+                "p_value":      r.get("mcnemar_pval", ""),
+                "test":         "McNemar test",
+                "ci_lower":     ci_l,
+                "ci_upper":     ci_u,
             })
         else:
-            # continuous case: paired‐t
+            # continuous
+            metric = "score"
+            ci_l = r.get(f"{metric}_ci_lower", "")
+            ci_u = r.get(f"{metric}_ci_upper", "")
             rows.append({
                 **common,
-                "metric":  "score",
-                "verdict": verdict(r, "score", higher_is_better=True),
-                "ci_lower": r.get("score_ci_lower", ""),
-                "ci_upper": r.get("score_ci_upper", ""),
+                "metric":       metric,
+                "origin_mean":  r.get(f"{metric}_orig_mean", ""),
+                "tree_mean":    r.get(f"{metric}_tree_mean", ""),
+                "margin":       compute_margin(ci_l, ci_u),
+                "verdict":      verdict(r, metric, higher_is_better=True),
+                "p_value":      r.get(f"{metric}_t_pval", ""),
+                "test":         "paired t-test",
+                "ci_lower":     ci_l,
+                "ci_upper":     ci_u,
             })
 
     return pd.DataFrame(rows)
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Simplify a detailed beam-search comparison CSV into verdict + CI only"
+        description="Simplify detailed beam-search results into verdict, ±margin, means, p-value, and test"
     )
-    parser.add_argument(
-        "detailed_csv",
-        help="Path to the detailed results CSV (with _diff_mean, _ci_lower, mcnemar_*, etc.)"
-    )
-    parser.add_argument(
-        "simplified_csv",
-        help="Output path for the simplified CSV"
-    )
+    parser.add_argument("detailed_csv", help="Path to the detailed CSV")
+    parser.add_argument("simplified_csv", help="Output path for the simplified CSV")
     args = parser.parse_args()
 
     df = pd.read_csv(args.detailed_csv)
@@ -100,3 +133,4 @@ if __name__ == "__main__":
     Example usage:
     python -m reproduction.statistic_testing.simplify_stats reproduction/statistic_testing_results.csv reproduction/simplified_results.csv
     """
+
