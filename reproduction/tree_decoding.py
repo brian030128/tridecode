@@ -217,6 +217,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     # (the clone itself is always small)
     next_token_logits = outputs.logits.clone()[:, -1, :].float()
     next_token_logits = next_token_logits.to(input_ids.device)
+    outputs.logits = None
     past_key_values = outputs.past_key_values
     token_scores = F.log_softmax(next_token_logits, dim=-1)
 
