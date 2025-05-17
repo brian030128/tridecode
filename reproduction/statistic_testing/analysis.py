@@ -1,172 +1,204 @@
 #!/usr/bin/env python3
-import os
-import glob
-import json
-import argparse
+import os, glob, json, argparse
 import pandas as pd
+from typing import Tuple
 from scipy.stats import ttest_rel
 from statsmodels.stats.weightstats import DescrStatsW
-from statsmodels.stats.contingency_tables import mcnemar
-from statsmodels.stats.contingency_tables import Table2x2
-from typing import Tuple
+from statsmodels.stats.contingency_tables import mcnemar, Table2x2
 
 def _is_binary(series: pd.Series) -> bool:
-    """True if the non-NaN values are a subset of {0,1} (or True/False)."""
+    """True if all non-NaN values are in {0,1,True,False}."""
     vals = series.dropna().unique()
     if len(vals) == 0:
         return False
-
-    # Turn numpy scalars into native Python, then check membership
     py_vals = {v.item() if hasattr(v, "item") else v for v in vals}
-
     return py_vals.issubset({0, 1, True, False})
 
-def _paired_t_with_ci(x: pd.Series, y: pd.Series, prefix: str, results: dict) -> None:
-    """Helper: paired t-test + 95 % CI on y-x and means."""
-    stat, pval = ttest_rel(x, y, nan_policy='omit')
-    results[f'{prefix}_orig_mean'] = m1 = x.mean()
-    results[f'{prefix}_tree_mean'] = m2 = y.mean()
-    results[f'{prefix}_t_stat']    = stat
-    results[f'{prefix}_t_pval']    = pval
+def _paired_t_with_ci(x: pd.Series, y: pd.Series, prefix: str, res: dict) -> None:
+    """Paired t-test + 95 % CI on (y-x) and record both means."""
+    stat, pval       = ttest_rel(x, y, nan_policy='omit')
+    res[f'{prefix}_orig_mean'] = x.mean()
+    res[f'{prefix}_tree_mean'] = y.mean()
+    res[f'{prefix}_t_stat']    = stat
+    res[f'{prefix}_t_pval']    = pval
 
     diff = (y - x).dropna()
     ci_low, ci_high = DescrStatsW(diff).tconfint_mean(alpha=0.05)
-    results[f'{prefix}_diff_mean'] = diff.mean()
-    results[f'{prefix}_ci_lower']  = ci_low
-    results[f'{prefix}_ci_upper']  = ci_high
+    res[f'{prefix}_diff_mean'] = diff.mean()
+    res[f'{prefix}_ci_lower']  = ci_low
+    res[f'{prefix}_ci_upper']  = ci_high
 
-def load_jsonl(path):
-    with open(path, 'r') as f:
-        records = [json.loads(line) for line in f]
-    return pd.DataFrame.from_records(records)
+def _describe(series: pd.Series, prefix: str, res: dict) -> None:
+    """Mean, std and 95 % CI for a single sample series."""
+    s = series.dropna()
+    res[f'{prefix}_mean'] = s.mean()
+    res[f'{prefix}_std']  = s.std(ddof=1)
+    ci_low, ci_high      = DescrStatsW(s).tconfint_mean(alpha=0.05)
+    res[f'{prefix}_ci_lower'] = ci_low
+    res[f'{prefix}_ci_upper'] = ci_high
 
-def compute_tok_per_sec(df):
-    def calc(row):
-        times = row['time_metric']
-        out_len = row['output_len']
+def _coerce_numeric(s: pd.Series) -> pd.Series:
+    """
+    Convert to numeric; non-convertible entries → NaN.
+    This keeps honest 0/1 scores, floats, ints, etc.,
+    but silently discards weird strings.
+    """
+    return pd.to_numeric(s, errors='coerce')
 
-        # tok/s
-        return out_len / (times[out_len-1] - times[0])
-    return df.apply(calc, axis=1)
+def load_jsonl(path: str) -> pd.DataFrame:
+    with open(path) as f:
+        return pd.DataFrame.from_records(json.loads(ln) for ln in f)
+
+def compute_tok_per_sec(df: pd.DataFrame) -> pd.Series:
+    """tokens / second over the output sequence."""
+    return df.apply(
+        lambda row: row['output_len'] /
+        (row['time_metric'][row['output_len'] - 1] - row['time_metric'][0]), axis=1
+    )
+
+def compute_mem_per_token(df: pd.DataFrame) -> pd.Series:
+    """
+    (peak_mem - model_mem) / (total tokens).
+    `peak_mem` is taken as max(memory_usage) for that sample.
+    """
+    peak = df['memory_usage'].apply(max)
+    lowest = df['memory_usage'].apply(min)
+    model_mem = df['model_memory']
+
+    tokens = df['input_len'] + df['output_len']
+
+    return (peak - model_mem) / tokens
+
+    # return (peak - lowest) / tokens
 
 
 def analyze_pair(orig_path: str, tree_path: str) -> dict:
-    """Compare one orig vs tree file pair and return a dict of statistics."""
-    df_o = load_jsonl(orig_path)
-    df_t = load_jsonl(tree_path)
+    df_o, df_t = load_jsonl(orig_path), load_jsonl(tree_path)
     assert len(df_o) == len(df_t), f"Sample count mismatch: {orig_path} vs {tree_path}"
 
-    df_o['tok_per_sec'] = compute_tok_per_sec(df_o)
-    df_t['tok_per_sec'] = compute_tok_per_sec(df_t)
+    # Derived columns
+    for df in (df_o, df_t):
+        df['tok_per_sec']   = compute_tok_per_sec(df)
+        df['mem_per_token'] = compute_mem_per_token(df)
 
-    results = {}
+    res: dict = {}
 
-    for metric in ['input_kv_memory', 'tok_per_sec']:
-        _paired_t_with_ci(df_o[metric], df_t[metric], metric, results)
+    # mean input / output lengths (they are identical in the pair)
+    res['mean_input_len']  = df_o['input_len'].mean()
+    res['mean_output_len'] = df_o['output_len'].mean()
 
-    score_o, score_t = df_o['score'], df_t['score']
+    # numeric paired metrics
+    for m in ['input_kv_memory', 'tok_per_sec', 'mem_per_token']:
+        _paired_t_with_ci(df_o[m], df_t[m], m, res)
 
-    if _is_binary(score_o) and _is_binary(score_t):
-        # Discordant pairs
-        b = ((score_o == 1) & (score_t == 0)).sum()
-        c = ((score_o == 0) & (score_t == 1)).sum()
+    # ------------------  score (binary OR continuous)  ------------------ #
+    s_o = _coerce_numeric(df_o['score'])
+    s_t = _coerce_numeric(df_t['score'])
 
-        results['mcnemar_b'] = b
-        results['mcnemar_c'] = c
+    # Always store the means that you asked for
+    res['score_orig_mean'] = s_o.mean()
+    res['score_tree_mean'] = s_t.mean()
 
-        # If there are no discordant pairs, McNemar is undefined:
-        if b + c == 0:
-            results.update({
-                'mcnemar_stat': 0.0,     # no change
-                'mcnemar_pval': 1.0,     # no evidence of difference
-                'mcnemar_or_ci_low': float('nan'),
-                'mcnemar_or_ci_high': float('nan'),
-                # if you still want the paired-diff CI:
-                'mcnemar_diff_ci_low': float('nan'),
-                'mcnemar_diff_ci_high': float('nan'),
-            })
+    if _is_binary(s_o) and _is_binary(s_t):
+        b = ((s_o == 1) & (s_t == 0)).sum()
+        c = ((s_o == 0) & (s_t == 1)).sum()
+        res['mcnemar_b'], res['mcnemar_c'] = b, c
+
+        if b + c == 0:          # no discordant pairs
+            res.update({'mcnemar_stat': 0.0, 'mcnemar_pval': 1.0,
+                        'mcnemar_or_ci_low': float('nan'),
+                        'mcnemar_or_ci_high': float('nan')})
         else:
-            # Build full table for odds‐ratio CI
-            n00 = ((score_o == 0) & (score_t == 0)).sum()
-            n11 = ((score_o == 1) & (score_t == 1)).sum()
-            table = [[n00, c],
-                     [b,   n11]]
+            n00 = ((s_o == 0) & (s_t == 0)).sum()
+            n11 = ((s_o == 1) & (s_t == 1)).sum()
+            table = [[n00, c], [b, n11]]
 
-            # McNemar's χ² (with continuity correction by default)
-            mc_res = mcnemar(table, exact=False, correction=True)
+            mc = mcnemar(table, exact=False, correction=True)
+            or_low, or_high = Table2x2(table).oddsratio_confint()
+            res.update({'mcnemar_stat': mc.statistic, 'mcnemar_pval': mc.pvalue,
+                        'mcnemar_or_ci_low': or_low, 'mcnemar_or_ci_high': or_high})
 
-            # Odds‐ratio CI (paired)
-            tbl2x2 = Table2x2(table)
-            or_low, or_high = tbl2x2.oddsratio_confint()
-
-            # Optional: CI on the paired difference in proportions
-            diff = (score_t - score_o).dropna()
-            diff_low, diff_high = DescrStatsW(diff).tconfint_mean()
-
-            results.update({
-                'mcnemar_stat':      mc_res.statistic,
-                'mcnemar_pval':      mc_res.pvalue,
-                'mcnemar_or_ci_low': or_low,
-                'mcnemar_or_ci_high':or_high,
-                'mcnemar_diff_ci_low':  diff_low,
-                'mcnemar_diff_ci_high': diff_high,
-            })
+            # Optional: CI on the paired diff in proportions
+            diff = (s_t - s_o).dropna()
+            d_low, d_high = DescrStatsW(diff).tconfint_mean()
+            res.update({'mcnemar_diff_ci_low': d_low,
+                        'mcnemar_diff_ci_high': d_high})
     else:
-        # Continuous score paired t-test
-        _paired_t_with_ci(score_o.astype(float), score_t.astype(float), 'score', results)
+        _paired_t_with_ci(s_o.astype(float), s_t.astype(float), 'score', res)
 
-    return results
+    return res
 
-def main(base_dir, output_csv):
+
+# beam = 1
+def analyze_origin_only(orig_path: str) -> dict:
+    df = load_jsonl(orig_path)
+    df['tok_per_sec']   = compute_tok_per_sec(df)
+    df['mem_per_token'] = compute_mem_per_token(df)
+    df['score'] = _coerce_numeric(df['score'])
+
+    res: dict = {
+        'mean_input_len':  df['input_len'].mean(),
+        'mean_output_len': df['output_len'].mean()
+    }
+
+    for m in ['input_kv_memory', 'tok_per_sec', 'mem_per_token', 'score']:
+        _describe(df[m].astype(float), f"{m}_orig", res)
+
+    # binary/continuous score mean already handled by _describe
+    return res
+
+
+def main(base_dir: str, output_csv: str):
     summary = []
-    # Iterate over each model directory
-    for model_name in os.listdir(base_dir):
-        orig_base = os.path.join(base_dir, model_name, 'origin')
-        tree_base = os.path.join(base_dir, model_name, 'tree')
-        if not os.path.isdir(orig_base) or not os.path.isdir(tree_base):
-            continue
-        
-        # For each dataset under orig/
-        for dataset_name in os.listdir(orig_base):
-            orig_dataset_dir = os.path.join(orig_base, dataset_name)
-            tree_dataset_dir = os.path.join(tree_base, dataset_name)
-            if not os.path.isdir(tree_dataset_dir):
-                print(f"[WARN] Missing tree/ directory for {model_name}/{dataset_name}, skipping.")
-                continue
-            
-            # For each beam_samples.jsonl in orig_dataset_dir
-            for orig_path in glob.glob(os.path.join(orig_dataset_dir, '*.jsonl')):
-                filename = os.path.basename(orig_path)                # e.g. "3_1000.jsonl"
-                beam_str, samples_str = os.path.splitext(filename)[0].split('_', 1)
-                tree_path = os.path.join(tree_dataset_dir, filename)
-                if not os.path.exists(tree_path):
-                    print(f"[WARN] Missing tree file {tree_path}, skipping.")
-                    continue
-                
-                stats = analyze_pair(orig_path, tree_path)
-                stats.update({
-                    'model': model_name,
-                    'dataset': dataset_name,
-                    'beam': int(beam_str),
-                    'samples': int(samples_str)
-                })
-                summary.append(stats)
-    
-    summary_df = pd.DataFrame(summary)
-    summary_df.to_csv(output_csv, index=False)
-    print(f"Analysis complete. Results saved to {output_csv}")
-    print(summary_df)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Compare orig vs tree beam-search decoding results.")
-    parser.add_argument("--base_dir", required=True,
-                        help="Root directory (e.g. 'final_out/') containing {model_name}/orig/{dataset}/ and {model_name}/tree/{dataset}/ subfolders.")
-    parser.add_argument("--output_csv", default="beam_search_comparison.csv",
-                        help="Output CSV file for summary results.")
-    args = parser.parse_args()
+    for model in os.listdir(base_dir):
+        obase = os.path.join(base_dir, model, 'origin')
+        tbase = os.path.join(base_dir, model, 'tree')
+        if not (os.path.isdir(obase) and os.path.isdir(tbase)):
+            continue
+
+        for dataset in os.listdir(obase):
+            o_dir = os.path.join(obase, dataset)
+            t_dir = os.path.join(tbase, dataset)
+            if not os.path.isdir(o_dir):
+                continue
+
+            for o_path in glob.glob(os.path.join(o_dir, '*.jsonl')):
+                fname = os.path.basename(o_path)        # e.g. "3_1000.jsonl"
+                beam, samples = map(int, os.path.splitext(fname)[0].split('_', 1))
+                t_path = os.path.join(t_dir, fname)
+
+                if os.path.exists(t_path):              # paired origin-vs-tree
+                    stats = analyze_pair(o_path, t_path)
+                elif beam == 1:                         # origin-only baseline
+                    stats = analyze_origin_only(o_path)
+                else:
+                    print(f"[WARN] Missing tree file {t_path}, skipping.")
+                    continue
+
+                stats.update({'model': model, 'dataset': dataset,
+                              'beam': beam, 'samples': samples})
+                summary.append(stats)
+
+    pd.DataFrame(summary).to_csv(output_csv, index=False)
+    print(f"Analysis complete. Results saved to {output_csv}")
+
+
+if __name__ == '__main__':
+    p = argparse.ArgumentParser(
+        description="Compare origin vs tree decoding results and gather beam-1 baselines."
+    )
+    p.add_argument('--base_dir',   required=True,
+                   help="Root dir with {model}/origin/{dataset}/ etc.")
+    p.add_argument('--output_csv', default='statistic_testing_results.csv',
+                   help="Destination CSV.")
+    args = p.parse_args()
     main(args.base_dir, args.output_csv)
+
 
     """
     Example usage:
-    python -m reproduction.statistic_testing.analysis --base_dir reproduction/final_out --output_csv reproduction/statistic_testing_results.csv
+    python -m reproduction.statistic_testing.analysis \
+        --base_dir=./reproduction/final_out \
+        --output_csv=./reproduction/statistic_testing_results.csv
     """

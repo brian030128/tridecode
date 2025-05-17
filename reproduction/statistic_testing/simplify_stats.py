@@ -32,6 +32,7 @@ def compute_margin(ci_low, ci_high):
     except Exception:
         return ""
 
+
 def simplify(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for _, r in df.iterrows():
@@ -42,8 +43,8 @@ def simplify(df: pd.DataFrame) -> pd.DataFrame:
             "samples": r["samples"],
         }
 
-        # 1) input_kv_memory (paired t‐test, lower is better)
-        metric = "input_kv_memory"
+        # 1) mem_per_token_ (paired t‐test, lower is better)
+        metric = "mem_per_token"
         ci_l = r.get(f"{metric}_ci_lower", "")
         ci_u = r.get(f"{metric}_ci_upper", "")
         rows.append({
