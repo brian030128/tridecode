@@ -211,7 +211,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     #generate the first k tokens
     past_key_values = DynamicCache()
 
-    outputs = model(input_ids, past_key_values=past_key_values, use_cache=True)
+    outputs = model(input_ids, past_key_values=past_key_values, use_cache=True,num_logits_to_keep=1)
 
     # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
     # (the clone itself is always small)
