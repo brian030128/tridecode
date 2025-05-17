@@ -30,7 +30,7 @@ sys.setrecursionlimit(3000)
 
 
 def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_params, origin_params):
-    tree_warmup(model, tokenizer, "This is a test", 3, 1000,  [ model.config.eos_token_id ])
+    tree_warmup(model, tokenizer, "This is a test", 3, 200,  [ model.config.eos_token_id ])
 
     ds = task.get_ds()
     for parameter in tree_params:
@@ -45,7 +45,7 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
             for metric in metrics:
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
-    origin_warmup(model, tokenizer, "This is a test", 3, 1000)
+    origin_warmup(model, tokenizer, "This is a test", 3, 200)
 
     for parameter in origin_params:
         path = f"out/{model_type.name}/origin/{task.type().name}"
@@ -77,8 +77,8 @@ def test_model(model_type:ModelType, tree_params, origin_params):
     )
 
     from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask
-    #run_task(model_type,model,tokenizer,HumanEvalTask(),range(164), tree_params, origin_params)
-    run_task(model_type,model,tokenizer,CNNSumTask(),range(3), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,HumanEvalTask(),range(164), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,CNNSumTask(),range(100), tree_params, origin_params)
 
 
 # beams / max_tokens
@@ -89,10 +89,10 @@ parameters = [
     (15,1000)
 ]
 
-#test_model(ModelType.PHI35, [(15,1000)], [(15,1000)])
-test_model(ModelType.LLAMA3, [(9 , 1000)], [])
-#test_model(ModelType.MISTRAL, 
-        #    [(3, 1000), (6, 1000)],
-        #    [(1, 1000),(3, 1000), (6, 1000)])
+test_model(ModelType.PHI35, [(3,1000), (9,1000), (15,1000)], [])
+test_model(ModelType.LLAMA3, [(3,1000), (9,1000), (15,1000)], [])
+test_model(ModelType.MISTRAL, 
+           [(3, 1000), (6, 1000)],
+           [])
 
 

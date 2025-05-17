@@ -217,6 +217,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     # (the clone itself is always small)
     next_token_logits = outputs.logits.clone()[:, -1, :].float()
     next_token_logits = next_token_logits.to(input_ids.device)
+    del outputs.logits
     past_key_values = outputs.past_key_values
     token_scores = F.log_softmax(next_token_logits, dim=-1)
 
@@ -228,7 +229,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     n_eos_tokens = len(eos_token_id)
     n_tokens_to_keep = max(2, 1 + n_eos_tokens) * beam_width
 
-    print(tokens.shape)
+    #print(tokens.shape)
     for i in range(beam_width):
         searchNode = SearchNode(searchTree, idx, tokens[0][i], token_scores[0][i])
         idx += 1
