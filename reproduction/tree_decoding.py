@@ -227,9 +227,10 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
 
     n_eos_tokens = len(eos_token_id)
     n_tokens_to_keep = max(2, 1 + n_eos_tokens) * beam_width
-    
+
+    print(tokens.shape)
     for i in range(beam_width):
-        searchNode = SearchNode(searchTree, idx, tokens[0][-1][i], token_scores[0][-1][i])
+        searchNode = SearchNode(searchTree, idx, tokens[0][i], token_scores[0][i])
         idx += 1
         newest_branch.append(searchNode)
         searchTree.root.append(searchNode)
