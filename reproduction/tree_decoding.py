@@ -219,6 +219,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     next_token_logits = next_token_logits.to(input_ids.device)
     del outputs.logits
     torch.cuda.empty_cache()
+    gpu_gc.collect()
     past_key_values = outputs.past_key_values
     token_scores = F.log_softmax(next_token_logits, dim=-1)
 
