@@ -208,11 +208,17 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     input_len = input_ids.shape[1]
     print("input length: ", input_len)
 
-    #generate the first 3 tokens
+    #generate the first k tokens
     past_key_values = DynamicCache()
+
     outputs = model(input_ids, past_key_values=past_key_values, use_cache=True)
+
+    # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
+    # (the clone itself is always small)
+    next_token_logits = outputs.logits.clone()[:, -1, :].float()
+    next_token_logits = next_token_logits.to(input_ids.device)
     past_key_values = outputs.past_key_values
-    token_scores = F.log_softmax(outputs.logits, dim=-1)
+    token_scores = F.log_softmax(next_token_logits, dim=-1)
 
     token_scores, tokens = torch.topk(token_scores, beam_width, dim=-1, largest=True, sorted=True)
     searchTree = SearchTree(model,beam_width = beam_width)
