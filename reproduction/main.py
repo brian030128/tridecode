@@ -77,8 +77,8 @@ def test_model(model_type:ModelType, tree_params, origin_params):
     )
 
     from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask
-    #run_task(model_type,model,tokenizer,HumanEvalTask(),range(164), tree_params, origin_params)
-    run_task(model_type,model,tokenizer,CNNSumTask(),range(3), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,HumanEvalTask(),range(164), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,CNNSumTask(),range(100), tree_params, origin_params)
 
 
 # beams / max_tokens
