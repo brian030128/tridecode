@@ -89,10 +89,10 @@ parameters = [
     (15,1000)
 ]
 # test_model(ModelType.LLAMA3, [(3,1000)], [])
-test_model(ModelType.PHI35, [(9,1000), (15,1000)], [])
-test_model(ModelType.LLAMA3, [(3,1000), (9,1000), (15,1000)], [])
-test_model(ModelType.MISTRAL, 
-           [(3, 1000), (6, 1000)],
-           [])
+test_model(ModelType.PHI35, [(3, 1000), (9,1000), (15,1000)], [])
+#test_model(ModelType.LLAMA3, [(3,1000), (9,1000), (15,1000)], [])
+#test_model(ModelType.MISTRAL, 
+#           [(3, 1000), (6, 1000)],
+#           [])
 
 
