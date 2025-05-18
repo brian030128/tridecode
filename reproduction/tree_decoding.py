@@ -261,9 +261,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
         outputs = model(input_ids, past_key_values=past_key_values, position_ids=position_ids, attention_mask=attention_mask, use_cache=True)
         past_key_values = outputs.past_key_values
         #calculate token scores
-        next_token_logits = outputs.logits.clone()[:, -1, :].float()
-        next_token_logits = next_token_logits.to(input_ids.device)
-        token_scores = F.log_softmax(next_token_logits, dim=-1)
+        token_scores = F.log_softmax(outputs.logits, dim=-1)
 
         beam_score = torch.tensor([b.acc_score for b in newest_branch], device=model.device)
         beam_score = beam_score.view((1, 1, beam_width, 1))
