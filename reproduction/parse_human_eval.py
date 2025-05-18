@@ -5,14 +5,14 @@ import subprocess
 
 
 source = {
-    # "LLAMA3": {
-    #     "origin": ["1_1000.jsonl", "3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"],
-    #     "tree": ["3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"]
-    # },
-    # "PHI35": {
-    #     "origin": ["1_1000.jsonl", "3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"],
-    #     "tree": ["3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"]
-    # },
+    "PHI35": {
+        "origin": ["1_1000.jsonl", "3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"],
+        "tree": ["3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"]
+    },
+    "LLAMA3": {
+        "origin": ["1_1000.jsonl", "3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"],
+        "tree": ["3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"]
+    },
     "MISTRAL": {
         "origin": ["1_1000.jsonl", "3_1000.jsonl", "6_1000.jsonl"],
         "tree": ["3_1000.jsonl", "6_1000.jsonl"]
