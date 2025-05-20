@@ -14,6 +14,10 @@ import GPUtil
 import torch
 import gc as gpu_gc
 
+import sys
+
+os.environ['HF_HOME'] = '/work/u4320956/hf-cache'
+sys.setrecursionlimit(5000)
 
 def get_gpu_usage():
     gpus = GPUtil.getGPUs()
@@ -384,7 +388,7 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 
-prompt = "Hi my name is Brian."
+prompt = "Hi my name is Brian." * 100
 input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
 print("input length: ", input_ids.shape[1])
 torch.cuda.synchronize()
