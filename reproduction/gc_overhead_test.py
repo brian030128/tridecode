@@ -411,7 +411,7 @@ def run ():
     torch.cuda.synchronize()
     end = time.time()
     print("total time: ", end - start)
-    print("output length", output[0].shape[1])
+    print("output length", output[0].shape)
     f.write(json.dumps({
         "pass_time": output[3],
         "gc_time": output[4]
