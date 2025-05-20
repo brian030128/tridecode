@@ -14,6 +14,7 @@ import GPUtil
 import torch
 import gc as gpu_gc
 
+import tqdm
 import sys
 import os
 os.environ['HF_HOME'] = '/work/u4320956/hf-cache'
@@ -245,7 +246,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
 
     need_gc = False
     total_gc_time = 0
-    for i in range(input_len, max_new_tokens+ input_len):
+    for i in tqdm(range(input_len, max_new_tokens + input_len)):
         torch.cuda.synchronize()
         one_pass_start = time.time()
         
