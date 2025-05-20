@@ -14,7 +14,7 @@ import GPUtil
 import torch
 import gc as gpu_gc
 
-import tqdm
+from tqdm import tqdm
 import sys
 import os
 os.environ['HF_HOME'] = '/work/u4320956/hf-cache'
