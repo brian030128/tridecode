@@ -406,7 +406,7 @@ def run ():
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
     output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=10, eos_token_id=[model.config.eos_token_id])
     print("input length: ", input_ids.shape[1])
-    torch.cuda.synchronize()
+    #torch.cuda.synchronize()
     start = time.time()
     output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=1000, eos_token_id=[model.config.eos_token_id])
     torch.cuda.synchronize()
