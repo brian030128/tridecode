@@ -248,6 +248,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     all_gc_time = []
     all_pass_time = []
 
+    one_pass_start_time = None
     for i in tqdm(range(input_len, max_new_tokens + input_len)):
         torch.cuda.synchronize()
         if one_pass_start_time is not None:
