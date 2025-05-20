@@ -380,22 +380,23 @@ def tree_generate(model, tokenizer, prompt, num_beams, max_new_tokens, eos_token
     return (output[0].long(), output[1], output[2])
 
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-model_name =  "meta-llama/Llama-3.1-8B-Instruct"
-tokenizer =  AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    device_map="auto"
-)
+def run ():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    model_name =  "meta-llama/Llama-3.1-8B-Instruct"
+    tokenizer =  AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        device_map="auto"
+    )
 
-prompt = "Hi my name is Brian." * 100
-input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
-print("input length: ", input_ids.shape[1])
-torch.cuda.synchronize()
-start = time.time()
-output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=3000, eos_token_id=[model.config.eos_token_id])
-torch.cuda.synchronize()
-end = time.time()
-print("total time: ", end - start)
-print("output length", output[0].shape[1])
-print("total gc time: ", output[3])
+    prompt = "Hi my name is Brian." * 100
+    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+    print("input length: ", input_ids.shape[1])
+    torch.cuda.synchronize()
+    start = time.time()
+    output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=3000, eos_token_id=[model.config.eos_token_id])
+    torch.cuda.synchronize()
+    end = time.time()
+    print("total time: ", end - start)
+    print("output length", output[0].shape[1])
+    print("total gc time: ", output[3])
