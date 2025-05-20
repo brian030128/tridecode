@@ -255,7 +255,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
             one_pass_time = time.time() - one_pass_start_time
             all_pass_time.append(one_pass_time)
         
-        if  ((i % 15 == 0) or need_gc) and True:
+        if i !=0 and ((i % 15 == 0) or need_gc) and True:
             gc_start_time = time.time()
            # print("gcccc")
             need_gc = False
@@ -404,8 +404,7 @@ def run ():
 
     prompt = "Hi my name is Brian." * 100
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
-    output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=10, eos_token_id=[model.config.eos_token_id])
-    print("input length: ", input_ids.shape[1])
+    generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=10, eos_token_id=[model.config.eos_token_id])
     #torch.cuda.synchronize()
     start = time.time()
     output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=1000, eos_token_id=[model.config.eos_token_id])
