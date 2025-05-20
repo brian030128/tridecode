@@ -141,23 +141,49 @@ def plot_all(curves: Dict, out_dir: Path = Path("./reproduction/figs")):
 def plot_combined(
     curves: Dict,
     out_path: Path = Path("./reproduction/figs/combined_memory.png"),
+    orientation: str = "vertical",
 ):
+    """
+    Draws a grid of memory usage curves.
+    - orientation="horizontal": rows = datasets, columns = models (default)
+    - orientation="vertical": rows = models, columns = datasets
+    """
+    # collect sorted lists of models and datasets
     models = sorted({m for (m, _, _, _) in curves.keys()})
-    ds_map = {m: sorted({d for (m2, d, _, _) in curves.keys() if m2 == m}) for m in models}
-    ncols = len(models)
-    nrows = max(len(ds_map[m]) for m in models)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
+    datasets = sorted({d for (_, d, _, _) in curves.keys()})
+
+    # determine grid shape
+    if orientation == "horizontal":
+        nrows, ncols = len(datasets), len(models)
+    elif orientation == "vertical":
+        nrows, ncols = len(models), len(datasets)
+    else:
+        raise ValueError("orientation must be 'horizontal' or 'vertical'")
+
+    # create subplots
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows), squeeze=False)
     cmap = plt.get_cmap("tab10")
 
-    for col, model in enumerate(models):
-        for row, dataset in enumerate(ds_map[model]):
-            ax = axes[row, col] if nrows > 1 else axes[col]
+    for i in range(nrows):
+        for j in range(ncols):
+            # map grid indices to model/dataset
+            if orientation == "horizontal":
+                dataset = datasets[i]
+                model = models[j]
+            else:
+                model = models[i]
+                dataset = datasets[j]
+
+            ax = axes[i, j]
             beams = choose_beams(curves, model, dataset)
-            # assign colors per beam for this subplot
+            if not beams:
+                fig.delaxes(ax)
+                continue
+
             beam_colors = _assign_colors(beams)
 
             for beam in beams:
-                beam_label = f"beam={beam}" if beam > 1 else "greedy (beam=1)"  
+                beam_label = f"beam={beam}" if beam > 1 else "greedy (beam=1)"
                 for variant, ls in [("origin", "--"), ("tree", "-")]:
                     key = (model, dataset, beam, variant)
                     if key not in curves or len(curves[key]) == 0:
@@ -172,17 +198,25 @@ def plot_combined(
                         label=f"{'trie' if variant == 'tree' else variant} ({beam_label})",
                         linewidth=1.2,
                     )
-            ax.set_title(f"{model} · {dataset}", fontsize=10)
+
+            if dataset == "HUMAN_EVAL":
+                dataset = "HumanEval"
+
+            if model == "PHI35":
+                model = "Phi-3.5"
+            elif model == "LLAMA3":
+                model = "Llama 3.1"
+            elif model == "MISTRAL":
+                model = "Mistral Small"
+
+            title = f"{model} · {dataset}"
+
+            ax.set_title(title, fontsize=10)
+            
             ax.set_xlabel("Decoding step", fontsize=8)
             ax.set_ylabel("Memory (GB)", fontsize=8)
             ax.grid(alpha=0.3)
             ax.legend(frameon=False, fontsize=6)
-
-    # remove extra axes
-    for r in range(nrows):
-        for c in range(ncols):
-            if r >= len(ds_map[models[c]]):
-                fig.delaxes(axes[r, c])
 
     fig.tight_layout()
     fig.savefig(out_path, dpi=300)
