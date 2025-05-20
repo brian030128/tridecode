@@ -400,3 +400,5 @@ def run ():
     print("total time: ", end - start)
     print("output length", output[0].shape[1])
     print("total gc time: ", output[3])
+
+run()
