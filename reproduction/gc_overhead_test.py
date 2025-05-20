@@ -245,20 +245,27 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     completed_branches = []
 
     need_gc = False
-    total_gc_time = 0
+    all_gc_time = []
+    all_pass_time = []
+
     for i in tqdm(range(input_len, max_new_tokens + input_len)):
         torch.cuda.synchronize()
-        one_pass_start = time.time()
+        if one_pass_start_time is not None:
+            one_pass_time = time.time() - one_pass_start_time
+            all_pass_time.append(one_pass_time)
         
         if  ((i % 15 == 0) or need_gc) and True:
+            gc_start_time = time.time()
            # print("gcccc")
             need_gc = False
             gc(searchTree,input_len, newest_branch, past_key_values)
             idx = searchTree.node_count
             torch.cuda.synchronize()
-            gc_time = time.time() - one_pass_start
-            total_gc_time += gc_time
+            gc_time = time.time() - gc_start_time
+            all_gc_time.append(gc_time)
 
+        torch.cuda.synchronize()
+        one_pass_start_time = time.time()
         #print("gpu: ", get_gpu_usage())
         position_ids = torch.tensor([[i for _ in range(beam_width)]], device=device)
         
@@ -362,7 +369,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
         #outputs = torch.cat((outputs, output.unsqueeze(0)))
     max_score = max(x[1] for x in outputs)
     max_sequence = [x[0] for x in outputs if x[1] == max_score]
-    return (max_sequence[0], metrics.memory_metrics, metrics.time_metrics, total_gc_time)
+    return (max_sequence[0], metrics.memory_metrics, metrics.time_metrics, all_pass_time, all_gc_time)
 
 
 
@@ -380,7 +387,7 @@ def tree_generate(model, tokenizer, prompt, num_beams, max_new_tokens, eos_token
     output = generate_next_tokens(model, input_ids, beam_width=num_beams, max_new_tokens=max_new_tokens, eos_token_id=eos_token_id)
     return (output[0].long(), output[1], output[2])
 
-
+import json
 def run ():
     from transformers import AutoModelForCausalLM, AutoTokenizer
     model_name =  "meta-llama/Llama-3.1-8B-Instruct"
@@ -390,16 +397,24 @@ def run ():
         device_map="auto"
     )
 
+    result_file = "out/gc_overhead.jsonl"
+    os.makedirs(os.path.dirname(result_file), exist_ok=True)
+    f = open(result_file, "w")
+
     prompt = "Hi my name is Brian." * 100
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
     print("input length: ", input_ids.shape[1])
     torch.cuda.synchronize()
     start = time.time()
-    output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=3000, eos_token_id=[model.config.eos_token_id])
+    output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=30, eos_token_id=[model.config.eos_token_id])
     torch.cuda.synchronize()
     end = time.time()
     print("total time: ", end - start)
     print("output length", output[0].shape[1])
-    print("total gc time: ", output[3])
+    f.write(json.dumps({
+        "pass_time": output[3],
+        "gc_time": output[4]
+    }) + "\n")
+    
 
 run()
