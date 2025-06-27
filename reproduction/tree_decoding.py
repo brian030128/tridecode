@@ -18,8 +18,9 @@ import gc as gpu_gc
 def get_gpu_usage():
     gpus = GPUtil.getGPUs()
     return gpus[0].memoryUsed
-    
-minFloat = torch.finfo(torch.float).min
+
+dtype = torch.float16
+minFloat = torch.finfo(dtype).min
 device = "cuda" if torch.cuda.is_available() else "cpu"
 class SearchNode:
     def __init__(self, root, idx, token_id, token_score):
@@ -98,7 +99,7 @@ def determine_unused_nodes(searchTree: SearchTree, targets: List[int]) -> Tuple[
 
 def generate_causal_mask(searchTree: SearchTree,input_len: int,nodes: List[SearchNode]) -> torch.Tensor:
     branch_count = len(nodes)
-    mask = torch.full((1, 1, branch_count, searchTree.node_count + input_len), minFloat, device=device, dtype=torch.float)
+    mask = torch.full((1, 1, branch_count, searchTree.node_count + input_len), minFloat, device=device, dtype=dtype)
     mask[0, 0,:,:input_len] = 0
     tmp = nodes.copy()
     #print("========")
