@@ -6,6 +6,41 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import statistics
 
+CUSTOM_COLORS = [
+    "#e41a1c",  # red
+    "#377eb8",  # blue
+    "#4daf4a",  # green
+    "#984ea3",  # purple
+    "#ff7f00",  # orange
+    "#ffff33",  # yellow
+    "#a65628",  # brown
+    "#f781bf",  # pink
+    "#999999",  # gray
+]
+
+
+def _assign_colors(beams: List[int]) -> Dict[int, str]:
+    """Map each beam in the list to a color from CUSTOM_COLORS."""
+    return {b: CUSTOM_COLORS[i % len(CUSTOM_COLORS)] for i, b in enumerate(sorted(beams))}
+
+
+def choose_beams(trends: Dict[Tuple[str, str, int], List[float]], model: str, dataset: str, n_max: int = 3) -> List[int]:
+    beams = sorted(b for (m, d, b) in trends.keys() if m == model and d == dataset)
+    if len(beams) <= n_max:
+        return beams
+    # pick smallest(greedy), second largest, and largest
+    return [beams[0], beams[-2], beams[-1]]
+
+
+def _load_memory(path: str) -> Dict[str, List[float]]:
+    """Load memory usage per sample minus model memory."""
+    data = {}
+    with open(path) as f:
+        for line in f:
+            obj = json.loads(line)
+            mem = [float(m) - float(obj.get("model_memory", 0)) for m in obj.get("memory_usage", [])]
+            data[obj["id"]] = mem
+    return data
 
 def _load_memory(path: str) -> Dict[str, List[float]]:
     """Load memory usage per sample minus model memory."""
@@ -117,6 +152,84 @@ def plot_trends(trends: Dict[Tuple[str, str, int], List[float]], out_dir: str) -
         plt.savefig(out_path / f'{model}_{dataset}_trend.png', dpi=300)
         plt.close()
 
+def plot_combined_trends(
+    trends: Dict[Tuple[str, str, int], List[float]],
+    out_path: Path = Path("./reproduction/figs/combined_overlap_trend.png"),
+    orientation: str = "vertical",
+) -> None:
+    """Draw a grid of overlap trend curves similar to combined memory plot."""
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+    except ImportError:
+        print("matplotlib not installed; skipping combined plot.")
+        return
+
+    models = sorted({m for (m, _, _) in trends.keys()})
+    datasets = sorted({d for (_, d, _) in trends.keys()})
+
+    if orientation == "horizontal":
+        nrows, ncols = len(datasets), len(models)
+    elif orientation == "vertical":
+        nrows, ncols = len(models), len(datasets)
+    else:
+        raise ValueError("orientation must be 'horizontal' or 'vertical'")
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows), squeeze=False)
+
+    for i in range(nrows):
+        for j in range(ncols):
+            if orientation == "horizontal":
+                dataset = datasets[i]
+                model = models[j]
+            else:
+                model = models[i]
+                dataset = datasets[j]
+
+            ax = axes[i, j]
+            beams = choose_beams(trends, model, dataset)
+            if not beams:
+                fig.delaxes(ax)
+                continue
+
+            beam_colors = _assign_colors(beams)
+            for beam in beams:
+                arr = trends.get((model, dataset, beam))
+                if not arr:
+                    continue
+                steps = np.arange(1, len(arr) + 1)
+                ax.plot(
+                    steps,
+                    arr,
+                    color=beam_colors[beam],
+                    label=f"beam={beam}",
+                    linewidth=1.2,
+                )
+
+            ax.axhline(0, color="black", lw=0.8, ls="--")
+
+            d_label = "HumanEval" if dataset == "HUMAN_EVAL" else dataset
+
+            if model == "PHI35":
+                m_label = "Phi-3.5"
+            elif model == "LLAMA3":
+                m_label = "Llama 3.1"
+            elif model == "MISTRAL":
+                m_label = "Mistral Small"
+            else:
+                m_label = model
+
+            title = f"{m_label} · {d_label}"
+            ax.set_title(title, fontsize=10)
+            ax.set_xlabel("Decoding step", fontsize=8)
+            ax.set_ylabel("Relative memory diff", fontsize=8)
+            ax.grid(alpha=0.3)
+            ax.legend(frameon=False, fontsize=6)
+
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
 
 def main():
     parser = argparse.ArgumentParser(description='Analyze memory overlap between origin and trie decoding')
@@ -142,6 +255,9 @@ def main():
 
     plot_trends(trends, args.fig_dir)
     print(f'Trend figures saved to {args.fig_dir}')
+
+    plot_combined_trends(trends, Path(args.fig_dir) / 'combined_overlap_trend.png')
+    print(f'Combined trend figure saved to {Path(args.fig_dir) / "combined_overlap_trend.png"}')
 
 
 if __name__ == '__main__':
