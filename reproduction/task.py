@@ -26,6 +26,8 @@ class Task:
                 return self.phi(prompt)
             case ModelType.LLAMA3:
                 return self.llama3(prompt)
+            case ModelType.LLAMA3_70B:
+                return self.llama3(prompt)
             case ModelType.MISTRAL:
                 return self.mistral(prompt)
             
@@ -50,7 +52,7 @@ def get_task(type: TaskType) -> Task:
     
 
 class HumanEvalTask(Task):
-    
+
     def llama3(self, prompt) -> str:
         return f"""<|start_header_id|>system<|end_header_id|>
                 You are a programmer.

@@ -66,7 +66,8 @@ def name(type):
             return "microsoft/Phi-3.5-mini-instruct"
         case ModelType.MISTRAL:
             return "mistralai/Mistral-Small-24B-Instruct-2501"
-    
+        case ModelType.LLAMA3_70B:
+            return "meta-llama/Llama-3.1-70B-Instruct"
 
 
 def test_model(model_type:ModelType, tree_params, origin_params):

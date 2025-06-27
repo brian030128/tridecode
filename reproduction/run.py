@@ -107,7 +107,7 @@ def run_bench_mark(
             continue
         start = time.time()
         try:
-            if model_type == ModelType.LLAMA3:
+            if model_type == ModelType.LLAMA3 or model_type == ModelType.LLAMA3_70B:
                 output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, model.config.eos_token_id)
             elif model_type == ModelType.MISTRAL:
                 output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [model.config.eos_token_id])
