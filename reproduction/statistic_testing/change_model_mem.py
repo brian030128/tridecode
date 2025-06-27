@@ -42,3 +42,8 @@ for dirpath, _, filenames in os.walk(ROOT_DIR):
                 f.write(line + '\n')
 
         print(f"✅  Updated model_memory in {filepath}")
+
+"""
+Example usage:
+python -m reproduction.statistic_testing.change_model_mem
+"""

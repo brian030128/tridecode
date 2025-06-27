@@ -10,8 +10,8 @@ show_ratio_panel = True
 with open(file_path) as f:
     data = json.load(f)
 
-pass_time = data["pass_time"]
-gc_time   = data["gc_time"]
+pass_time = data["pass_time"][1:]
+gc_time   = data["gc_time"][1:]
 
 # Build the x-axes
 x_pass = list(range(len(pass_time)))
