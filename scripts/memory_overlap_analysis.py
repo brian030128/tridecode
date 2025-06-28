@@ -233,7 +233,7 @@ def plot_combined_trends(
 
 def main():
     parser = argparse.ArgumentParser(description='Analyze memory overlap between origin and trie decoding')
-    parser.add_argument('--base_dir', default='reproduction/out', help='Directory with model outputs')
+    parser.add_argument('--base_dir', default='reproduction/final_out', help='Directory with model outputs')
     parser.add_argument('--output_csv', default='memory_overlap.csv', help='Summary CSV')
     parser.add_argument('--trend_csv', default='memory_overlap_trend.csv', help='Step-wise ratio CSV')
     parser.add_argument('--fig_dir', default='reproduction/figs', help='Directory to save trend plots')
