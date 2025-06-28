@@ -8,7 +8,7 @@ from datasets import load_dataset
 import json
 
 
-from origin import origin_generate, origin_warmup
+from origin import origin_generate, origin_warmup, sampling_generate
 from tree_decoding import tree_generate, tree_warmup
 from run import run_bench_mark
 from task import Task
@@ -33,6 +33,16 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
     tree_warmup(model, tokenizer, "This is a test", 3, 200,  [ model.config.eos_token_id ])
 
     ds = task.get_ds()
+
+    path = f"out/{model_type.name}/sample/{task.type().name}"
+    os.makedirs(path, exist_ok=True)
+    print("processing sample " )
+    with open(f"{path}/sample.jsonl", "w") as out_file:
+        metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, None, 1000)
+        for metric in metrics:
+            out_file.write(json.dumps(metric.to_dict()) + "\n")
+
+
     for parameter in tree_params:
         if parameter[0] == 1:
             continue
@@ -90,11 +100,11 @@ parameters = [
     (9 , 1000),
     (15,1000)
 ]
-# test_model(ModelType.LLAMA3, [(3,1000)], [])
-#test_model(ModelType.PHI35, [(3, 1000), (9,1000), (15,1000)], [])
+#test_model(ModelType.LLAMA3, [(3,1000)], [])
+test_model(ModelType.PHI35, [], [])
 #test_model(ModelType.LLAMA3, [(3,1000), (9,1000), (15,1000)], [])
 #test_model(ModelType.MISTRAL, 
 #           [(15, 1000)],
 #           [])
 
-test_model(ModelType.LLAMA3_70B, [(3, 1000)], [(1, 1000), (3, 1000)])
+#test_model(ModelType.LLAMA3_70B, [(3, 1000)], [(1, 1000), (3, 1000)])

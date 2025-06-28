@@ -18,3 +18,11 @@ def origin_generate(model, tokenizer, prompt, num_beams, max_new_tokens, eos_tok
 
     return (outputs[0][input_ids.shape[-1]:], metrics.memory_metrics, metrics.time_metrics)
 
+def sampling_generate(model, tokenizer, prompt, num_beams, max_new_tokens, eos_token_id,temperature=1.0) -> Tuple[List[int], List[int], List[float]]:
+
+    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+
+    outputs = model.generate(input_ids,do_sample=True, return_legacy_cache=False, temperature=temperature,
+                             max_new_tokens=max_new_tokens, early_stopping=True)
+
+    return (outputs[0][input_ids.shape[-1]:], metrics.memory_metrics, metrics.time_metrics)
