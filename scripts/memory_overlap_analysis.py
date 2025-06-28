@@ -262,3 +262,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    """
+    Example usage:
+    python -m scripts.memory_overlap_analysis
+    """
