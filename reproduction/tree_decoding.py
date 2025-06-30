@@ -292,10 +292,9 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
             token_id = tokens[j]
             picked.append(token_id.item())
             searchNode = SearchNode(searchTree, idx, token_id=token_id, token_score = token_scores[j])
-
             
             #print(int(token_idx/beam_width)," add child")
-            
+
             if token_id in eos_token_id:
                 #print(i, "ended")
                 #need_gc = True
@@ -350,8 +349,6 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     max_score = max(x[1] for x in outputs)
     max_sequence = [x[0] for x in outputs if x[1] == max_score]
     return (max_sequence[0], metrics.memory_metrics, metrics.time_metrics)
-
-
 
 
 
