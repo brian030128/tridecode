@@ -29,7 +29,7 @@ sys.setrecursionlimit(3000)
 
 
 def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_params, origin_params):
-    tree_warmup(model, tokenizer, "This is a test", 3, 200,  [ model.config.eos_token_id ])
+   # tree_warmup(model, tokenizer, "This is a test", 3, 200,  [ model.config.eos_token_id ])
 
 
     ds = task.get_ds()
