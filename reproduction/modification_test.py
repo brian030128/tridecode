@@ -373,7 +373,8 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
             break
         # if len(completed_branches) >= beam_width:
         #     early_complete = True
-
+    
+    should_be = i * beam_width
     #find the best branch
     max_score=0
     max_idx = 0
@@ -383,7 +384,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
             max_idx = i
 
     ### Count total branch numbers
-    should_be = i * beam_width
+    
     total_nodes = count_nodes(searchTree.root)
     used_nodes = count_used_nodes(newest_branch)
 
