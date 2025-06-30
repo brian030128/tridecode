@@ -234,9 +234,9 @@ def count_nodes(list_nodes: List[SearchNode]):
             stack.insert(0, child)
     return i
 
-def count_used_nodes(leaves: List[SearchNode]):
-    i = len(leaves)
-    stack = leaves.copy()
+def count_used_nodes(leaf: SearchNode):
+    i = 1
+    stack = [leaf]
     while True:
         if len(stack) == 0:
             break
@@ -403,7 +403,12 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     print("kv len: ", past_key_values.key_cache[0].shape)
     
     total_nodes = count_nodes(searchTree.root) + input_len - 2 * beam_width
-    used_nodes = count_used_nodes(newest_branch) + input_len - 2 * beam_width
+
+    best_branch = newest_branch[0]
+    for i in range(1, beam_width):
+        if newest_branch[i].acc_score > best_branch.acc_score:
+            best_branch = newest_branch[i]
+    used_nodes = count_used_nodes(best_branch) + input_len - 2 * beam_width
 
     print("there should be ", should_be)
     print("total nodes", total_nodes)
