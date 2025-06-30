@@ -23,7 +23,22 @@ sys.setrecursionlimit(5000)
 def get_gpu_usage():
     gpus = GPUtil.getGPUs()
     return gpus[0].memoryUsed
-    
+
+
+total_saved = []
+gc_saved = []
+
+import csv 
+
+def write_out():
+    with open('final_out/modification_test.csv', mode='w', newline='') as file:
+        global gc_saved, total_saved
+        writer = csv.writer(file)
+        writer.writerow(['total_saved', 'gc_saved'])  # Write header
+        for xi, yi in zip(total_saved, gc_saved):
+            writer.writerow([xi, yi])
+
+
 minFloat = torch.finfo(torch.float).min
 device = "cuda" if torch.cuda.is_available() else "cpu"
 class SearchNode:
@@ -396,6 +411,10 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     print("gc saved ", total_nodes - used_nodes)
     print("tree attention saved ", (should_be - used_nodes), "but increased ", total_nodes - used_nodes)
 
+    global gc_saved, total_saved
+    total_saved.append(should_be - used_nodes)
+    gc_saved.append(total_nodes - used_nodes)
+
     #construct the output
     outputs = []
     if early_complete:
@@ -417,8 +436,6 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     max_score = max(x[1] for x in outputs)
     max_sequence = [x[0] for x in outputs if x[1] == max_score]
     return (max_sequence[0], metrics.memory_metrics, metrics.time_metrics, all_pass_time, all_gc_time)
-
-
 
 
 
