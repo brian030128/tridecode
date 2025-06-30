@@ -348,6 +348,7 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
             #print(int(token_idx/beam_width)," add child")
 
             if token_id in eos_token_id:
+                early_complete = True
                 #print(i, "ended")
                 #need_gc = True
                 completed_nodes.append(searchNode)
@@ -382,8 +383,17 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
             max_idx = i
 
     ### Count total branch numbers
-    print("total nodes", count_nodes(searchTree.root))
-    print("used nodes", count_used_nodes(newest_branch))
+    should_be = i * beam_width
+    total_nodes = count_nodes(searchTree.root)
+    used_nodes = count_used_nodes(newest_branch)
+
+    print("there should be ", should_be)
+    print("total nodes", total_nodes)
+    print("used nodes", used_nodes)
+
+    print("total saved ", should_be - used_nodes)
+    print("gc saved ", total_nodes - used_nodes)
+    print("tree attention saved ", (should_be - used_nodes), "but increased ", total_nodes - used_nodes)
 
     #construct the output
     outputs = []
