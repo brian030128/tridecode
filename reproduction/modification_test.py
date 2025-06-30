@@ -400,8 +400,10 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
 
     ### Count total branch numbers
     
+    print("kv len: ", past_key_values.key_cache[0].shape)
+    
     total_nodes = count_nodes(searchTree.root)
-    used_nodes = count_used_nodes(newest_branch)
+    used_nodes = count_used_nodes(newest_branch) + input_len
 
     print("there should be ", should_be)
     print("total nodes", total_nodes)
