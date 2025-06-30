@@ -223,7 +223,7 @@ import gc as gpu_gc
 
 
 def count_nodes(list_nodes: List[SearchNode]):
-    i = 0
+    i = len(list_nodes)
     stack = list_nodes.copy()
     while True:
         if len(stack) == 0:
@@ -235,7 +235,7 @@ def count_nodes(list_nodes: List[SearchNode]):
     return i
 
 def count_used_nodes(leaves: List[SearchNode]):
-    i = 0
+    i = len(leaves)
     stack = leaves.copy()
     while True:
         if len(stack) == 0:
