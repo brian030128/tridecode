@@ -426,7 +426,7 @@ def tree_generate(model, tokenizer, prompt, num_beams, max_new_tokens, eos_token
 import json
 def run ():
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    model_name =  "meta-llama/Llama-3.1-8B-Instruct"
+    model_name = "microsoft/Phi-3.5-mini-instruct"
     tokenizer =  AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
