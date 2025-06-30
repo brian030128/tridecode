@@ -10,6 +10,7 @@ import json
 
 from origin import origin_generate, origin_warmup, sampling_generate
 from tree_decoding import tree_generate, tree_warmup
+from modification_test import tree_generate as modified_tree_generate
 from run import run_bench_mark
 from task import Task
 from model_type import ModelType
@@ -51,7 +52,7 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
         os.makedirs(path, exist_ok=True)
         print("processing tree ",parameter[0], "_",parameter[1] )
         with open(f"{path}/{parameter[0]}_{parameter[1]}.jsonl", "w") as out_file:
-            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), tree_generate, task, model_type, parameter[0], parameter[1])
+            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), modified_tree_generate, task, model_type, parameter[0], parameter[1])
             for metric in metrics:
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
