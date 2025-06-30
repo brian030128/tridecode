@@ -34,9 +34,9 @@ def write_out():
     with open('final_out/modification_test.csv', mode='w', newline='') as file:
         global gc_saved, total_saved
         writer = csv.writer(file)
-        writer.writerow(['total_saved', 'gc_saved'])  # Write header
+        writer.writerow(['total_saved', 'gc_saved', 'trie_atten_saved'])  # Write header
         for xi, yi in zip(total_saved, gc_saved):
-            writer.writerow([xi, yi])
+            writer.writerow([xi, yi, xi - yi])
 
 
 minFloat = torch.finfo(torch.float).min
