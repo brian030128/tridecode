@@ -83,6 +83,7 @@ def name(type):
 
 
 def test_model(model_type:ModelType, tree_params, origin_params):
+    print(model_type, tree_params)
     tokenizer = AutoTokenizer.from_pretrained(name(model_type))
     model = AutoModelForCausalLM.from_pretrained(
         name(model_type),

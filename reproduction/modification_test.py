@@ -419,6 +419,8 @@ def tree_generate(model, tokenizer, prompt, num_beams, max_new_tokens, eos_token
     gpu_gc.collect()
     metrics.clear()
 
+    print("max new tokens")
+
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
     output = generate_next_tokens(model, input_ids, beam_width=num_beams, max_new_tokens=max_new_tokens, eos_token_id=eos_token_id)
     return (output[0].long(), output[1], output[2])
