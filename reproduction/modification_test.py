@@ -27,6 +27,8 @@ def get_gpu_usage():
 
 total_saved = []
 gc_saved = []
+time_took = []
+
 
 import csv 
 
@@ -34,9 +36,9 @@ def write_out():
     with open('final_out/modification_test.csv', mode='w', newline='') as file:
         global gc_saved, total_saved
         writer = csv.writer(file)
-        writer.writerow(['total_saved', 'gc_saved', 'trie_atten_saved'])  # Write header
-        for xi, yi in zip(total_saved, gc_saved):
-            writer.writerow([xi, yi, xi - yi])
+        writer.writerow(['total_saved', 'gc_saved', 'trie_atten_saved', 'time_took'])  # Write header
+        for xi, yi, ti in zip(total_saved, gc_saved, time_took):
+            writer.writerow([xi, yi, xi - yi, json.dumps(ti)])
 
 
 minFloat = torch.finfo(torch.float).min
@@ -259,8 +261,11 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     #generate the first k tokens
     past_key_values = DynamicCache()
 
+    time_stamps = [time.time()]
+
     outputs = model(input_ids, past_key_values=past_key_values, use_cache=True,num_logits_to_keep=1)
 
+    time_stamps.append(time.time())
     # Clone is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
     # (the clone itself is always small)
     next_token_logits = outputs.logits.clone()[:, -1, :].float()
@@ -275,6 +280,8 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
 
     n_eos_tokens = len(eos_token_id)
     n_tokens_to_keep = max(2, 1 + n_eos_tokens) * beam_width
+
+    
 
     #print(tokens.shape)
     for i in range(beam_width):
@@ -293,7 +300,8 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     one_pass_start_time = None
 
     for i in tqdm(range(input_len, max_new_tokens + input_len)):
-        torch.cuda.synchronize()
+        time_stamps.append(time.time())
+
         if one_pass_start_time is not None:
             one_pass_time = time.time() - one_pass_start_time
             all_pass_time.append(one_pass_time)
@@ -304,11 +312,9 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
             need_gc = False
             gc(searchTree,input_len, newest_branch, past_key_values)
             idx = searchTree.node_count
-            torch.cuda.synchronize()
             gc_time = time.time() - gc_start_time
             all_gc_time.append(gc_time)
 
-        torch.cuda.synchronize()
         one_pass_start_time = time.time()
         #print("gpu: ", get_gpu_usage())
         position_ids = torch.tensor([[i for _ in range(beam_width)]], device=device)
@@ -418,9 +424,10 @@ def generate_next_tokens(model, input_ids, beam_width = 3, max_new_tokens=300,eo
     print("gc saved ", total_nodes - used_nodes)
     print("tree attention saved ", (should_be - used_nodes), "but increased ", total_nodes - used_nodes)
 
-    global gc_saved, total_saved
+    global gc_saved, total_saved, time_took
     total_saved.append(should_be - used_nodes)
     gc_saved.append(total_nodes - used_nodes)
+    time_took.append(time_stamps)
 
     #construct the output
     outputs = []
@@ -477,10 +484,10 @@ def run ():
     prompt = "Hi my name is Brian." * 100
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
     generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=10, eos_token_id=[model.config.eos_token_id])
-    #torch.cuda.synchronize()
+
     start = time.time()
     output = generate_next_tokens(model, input_ids, beam_width=30, max_new_tokens=1000, eos_token_id=[model.config.eos_token_id])
-    torch.cuda.synchronize()
+
     end = time.time()
     print("total time: ", end - start)
     print("output length", output[0].shape)
