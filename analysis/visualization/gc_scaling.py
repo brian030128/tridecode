@@ -46,7 +46,7 @@ if show_ratio_panel:
     ax_pass[1].set_ylim(bottom=0)
     ax_pass[1].grid(alpha=.3)
 
-out_path = "reproduction/figs/gc_overhead.png"
+out_path = "analysis/results/figs/gc_overhead.png"
 fig.tight_layout()
 fig.savefig(out_path, dpi=300)
 plt.close(fig)
@@ -54,5 +54,5 @@ print(f"GC overhead figure saved to {out_path}")
 
 """
 Example usage:
-python -m reproduction.visualization.gc_scaling
+python -m analysis.visualization.gc_scaling
 """

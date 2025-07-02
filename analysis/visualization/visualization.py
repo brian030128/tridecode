@@ -38,6 +38,7 @@ def _parse_path(p: Path) -> Tuple[str, str, str, int]:
     # ensure we are looking after .../final_out/...
     parts = p.parts[p.parts.index("final_out") + 1 :]
     model, variant, dataset, fname = parts[:4]
+
     beam = int(fname.split("_")[0])  # '1_1000.jsonl' -> 1
     return model, variant, dataset, beam
 
@@ -73,7 +74,10 @@ def load_all(base_dir: str = "final_out") -> Dict:
     agg: Dict[Tuple[str, str, int, str], List[List[float]]] = defaultdict(list)
 
     for path in Path(base_dir).rglob("*.jsonl"):
-        model, variant, dataset, beam = _parse_path(path)
+        try:
+            model, variant, dataset, beam = _parse_path(path)
+        except:
+            continue  # skip paths that do not match expected structure
 
         if dataset == "GSM8K" or dataset == "WMT":
             continue
@@ -101,7 +105,7 @@ def choose_beams(curves, model, dataset, n_max=3) -> List[int]:
     return [beams[0], beams[-2], beams[-1]]
 
 
-def plot_all(curves: Dict, out_dir: Path = Path("./reproduction/figs")):
+def plot_all(curves: Dict, out_dir: Path = Path("./analysis/results/figs")):
     out_dir.mkdir(parents=True, exist_ok=True)
     cmap = plt.get_cmap("tab10")
 
@@ -140,7 +144,7 @@ def plot_all(curves: Dict, out_dir: Path = Path("./reproduction/figs")):
 
 def plot_combined(
     curves: Dict,
-    out_path: Path = Path("./reproduction/figs/combined_memory.png"),
+    out_path: Path = Path("./analysis/results/figs/combined_memory.png"),
     orientation: str = "vertical",
 ):
     """
@@ -225,12 +229,12 @@ def plot_combined(
 
 if __name__ == "__main__":
     curves = load_all("./reproduction/final_out")
-    save_path = "./reproduction/figs"
+    save_path = "./analysis/results/figs"
     plot_all(curves, Path(save_path))
-    plot_combined(curves, Path("./reproduction/figs/combined_memory.png"))
+    plot_combined(curves, Path("./analysis/results/figs/combined_memory.png"))
     print(f"Figures saved in {save_path}")
 
     """
     Example usage:
-    python -m reproduction.visualization.visualization
+    python -m analysis.visualization.visualization
     """

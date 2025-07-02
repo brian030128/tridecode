@@ -132,6 +132,6 @@ if __name__ == "__main__":
 
     """
     Example usage:
-    python -m reproduction.statistic_testing.simplify_stats reproduction/statistic_testing_results.csv reproduction/simplified_results.csv
+    python -m analysis.statistic_testing.simplify_stats reproduction/statistic_testing_results.csv analysis/results/simplified_results.csv
     """
 

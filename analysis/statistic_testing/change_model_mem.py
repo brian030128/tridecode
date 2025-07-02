@@ -45,5 +45,5 @@ for dirpath, _, filenames in os.walk(ROOT_DIR):
 
 """
 Example usage:
-python -m reproduction.statistic_testing.change_model_mem
+python -m analysis.statistic_testing.change_model_mem
 """

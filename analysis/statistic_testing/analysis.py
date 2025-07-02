@@ -190,15 +190,18 @@ if __name__ == '__main__':
     )
     p.add_argument('--base_dir',   required=True,
                    help="Root dir with {model}/origin/{dataset}/ etc.")
-    p.add_argument('--output_csv', default='statistic_testing_results.csv',
-                   help="Destination CSV.")
+    p.add_argument(
+        '--output_csv',
+        default='analysis/results/statistic_testing_results.csv',
+        help="Destination CSV."
+    )
     args = p.parse_args()
     main(args.base_dir, args.output_csv)
 
 
     """
     Example usage:
-    python -m reproduction.statistic_testing.analysis \
+    python -m analysis.statistic_testing.analysis \
         --base_dir=./reproduction/final_out \
-        --output_csv=./reproduction/statistic_testing_results.csv
+        --output_csv=./analysis/results/statistic_testing_results.csv
     """

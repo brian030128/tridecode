@@ -154,7 +154,7 @@ def plot_trends(trends: Dict[Tuple[str, str, int], List[float]], out_dir: str) -
 
 def plot_combined_trends(
     trends: Dict[Tuple[str, str, int], List[float]],
-    out_path: Path = Path("./reproduction/figs/combined_overlap_trend.png"),
+    out_path: Path = Path("./analysis/results/figs/combined_overlap_trend.png"),
     orientation: str = "vertical",
 ) -> None:
     """Draw a grid of overlap trend curves similar to combined memory plot."""
@@ -234,9 +234,9 @@ def plot_combined_trends(
 def main():
     parser = argparse.ArgumentParser(description='Analyze memory overlap between origin and trie decoding')
     parser.add_argument('--base_dir', default='reproduction/final_out', help='Directory with model outputs')
-    parser.add_argument('--output_csv', default='memory_overlap.csv', help='Summary CSV')
-    parser.add_argument('--trend_csv', default='memory_overlap_trend.csv', help='Step-wise ratio CSV')
-    parser.add_argument('--fig_dir', default='reproduction/figs', help='Directory to save trend plots')
+    parser.add_argument('--output_csv', default='analysis/results/memory_overlap.csv', help='Summary CSV')
+    parser.add_argument('--trend_csv', default='analysis/results/memory_overlap_trend.csv', help='Step-wise ratio CSV')
+    parser.add_argument('--fig_dir', default='analysis/results/figs', help='Directory to save trend plots')
     args = parser.parse_args()
 
     summary, trends = analyze(args.base_dir)
@@ -265,5 +265,5 @@ if __name__ == '__main__':
 
     """
     Example usage:
-    python -m scripts.memory_overlap_analysis
+    python -m analysis.memory_overlap
     """
