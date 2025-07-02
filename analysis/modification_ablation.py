@@ -10,6 +10,11 @@ with width 3:
 
 The second configuration is recorded in ``modification_test.csv`` while the
 baseline and full trie results are loaded from the ``final_out`` directory.
+
+Timing information in ``modification_test.csv`` only contains timestamps for
+the first 400 generated tokens under the "Yes trie, No GC" setting. To keep
+the comparison fair, we truncate all timing arrays to at most 400 tokens when
+computing total runtime across the three configurations.
 """
 
 import csv
@@ -31,13 +36,18 @@ def _mean_ci(data):
     return mean, mean - margin, mean + margin
 
 
-def load_rows(path):
+def load_rows(path, limit_tokens=400):
+    """Load CSV rows and compute total time up to ``limit_tokens`` tokens."""
     rows = []
     with open(path) as f:
         reader = csv.DictReader(f)
         for row in reader:
             times = json.loads(row['time_took'])
-            total_time = times[-1] - times[0] if len(times) >= 2 else 0.0
+            if times:
+                end = min(len(times) - 1, limit_tokens)
+                total_time = times[end] - times[0]
+            else:
+                total_time = 0.0
             rows.append({
                 'total_saved': int(row['total_saved']),
                 'gc_saved': int(row['gc_saved']),
@@ -47,13 +57,19 @@ def load_rows(path):
     return rows
 
 
-def load_times(jsonl_path):
-    """Return a list of total times from a JSONL output file."""
+def load_times(jsonl_path, limit_tokens=400):
+    """Return a list of total times up to ``limit_tokens`` tokens from a JSONL output file."""
     times = []
     with open(jsonl_path) as f:
         for line in f:
             data = json.loads(line)
-            times.append(float(data.get("time_taken", 0.0)))
+            stamps = data.get("time_metric")
+            if stamps:
+                end = min(len(stamps) - 1, limit_tokens)
+                total = stamps[end] - stamps[0]
+            else:
+                total = float(data.get("time_taken", 0.0))
+            times.append(total)
     return times
 
 
@@ -110,11 +126,13 @@ def main():
         help='JSONL file for trie+GC results',
     )
     p.add_argument('--out_csv', default='analysis/results/modification_ablation.csv')
+    p.add_argument('--limit_tokens', type=int, default=400,
+                   help='Number of tokens to use when computing timing metrics')
     args = p.parse_args()
 
-    rows = load_rows(args.csv)
-    origin_times = load_times(args.origin_jsonl)
-    tree_times = load_times(args.tree_jsonl)
+    rows = load_rows(args.csv, args.limit_tokens)
+    origin_times = load_times(args.origin_jsonl, args.limit_tokens)
+    tree_times = load_times(args.tree_jsonl, args.limit_tokens)
     analyze(origin_times, rows, tree_times, args.out_csv)
     print(f'Results saved to {args.out_csv}')
 
