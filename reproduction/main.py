@@ -52,7 +52,7 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
         os.makedirs(path, exist_ok=True)
         print("processing tree ",parameter[0], "_",parameter[1] )
         with open(f"{path}/{parameter[0]}_{parameter[1]}.jsonl", "w") as out_file:
-            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), modified_tree_generate, task, model_type, parameter[0], parameter[1])
+            metrics = run_bench_mark(model, tokenizer, ds.select(data_num), tree_generate, task, model_type, parameter[0], parameter[1])
             for metric in metrics:
                 out_file.write(json.dumps(metric.to_dict()) + "\n")
 
@@ -107,8 +107,8 @@ parameters = [
 print("wwwarawrwarwarwarawr")
 test_model(ModelType.LLAMA3, [(9,1000)], [])
 #test_model(ModelType.PHI35, [(3, 400)], [])
-from modification_test import write_out
-write_out()
+#from modification_test import write_out
+#write_out()
 #test_model(ModelType.LLAMA3, [(3,1000), (9,1000), (15,1000)], [])
 #test_model(ModelType.MISTRAL, 
 #           [(15, 1000)],
