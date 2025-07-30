@@ -17,6 +17,11 @@ def _step_tree_distance(step_a: np.ndarray, step_b: np.ndarray, metric: str) -> 
 
     Each input is shaped ``(beam, vocab)``. The distance is the average of the
     minimal pairwise distances between beams from ``step_a`` and ``step_b``.
+
+    Averaging those two sets of minimums gives us a symmetric set-distance—essentially an average-case Hausdorff distance—between the two beams.
+    * step_a and step_b are your two decoders' logits.
+    * We compare one beam element to all of the other so that we don't force an arbitrary alignment; we instead let each hypothesis "find" its closest match.
+    * This is exactly the right recipe if our goal is "compute a distance between two sets of beam outputs when they have different members or ordering."
     """
     dist = np.zeros((step_a.shape[0], step_b.shape[0]), dtype=float)
     for i, a in enumerate(step_a):

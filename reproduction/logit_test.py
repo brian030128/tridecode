@@ -76,8 +76,10 @@ def record_trie_logits(
             token_scores = log_probs + beam_score
             vocab_size = token_scores.shape[-1]
             token_scores = token_scores.view(beam_width * vocab_size)
-            topk_scores, tokens = torch.topk(token_scores, beam_width * max(2, 1 + len(eos_token_id)),
-                                             dim=0, largest=True, sorted=True)
+            topk_scores, tokens = torch.topk(
+                token_scores, beam_width * max(2, 1 + len(eos_token_id)),
+                dim=0, largest=True, sorted=True
+            )
             next_indices = torch.div(tokens, vocab_size, rounding_mode="floor")
             tokens = tokens % vocab_size
             tmp_newest_branch = []
