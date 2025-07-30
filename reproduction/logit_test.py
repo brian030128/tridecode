@@ -108,10 +108,14 @@ def main():
     parser.add_argument("--text_column", default="text", help="Column in dataset containing text prompts")
     parser.add_argument("--split", default="test", help="Dataset split")
     parser.add_argument("--config", default=None, help="Dataset config name")
-    parser.add_argument("--samples", type=int, default=1, help="Number of samples to evaluate")
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=None,
+        help="Number of samples to evaluate (omit to use all)"
+    )
     parser.add_argument("--beam_width", type=int, default=3)
     parser.add_argument("--max_new_tokens", type=int, default=50)
-    parser.add_argument("--output", default="logits.json", help="Output file to store logits")
     parser.add_argument("--seed", type=int, default=1234)
     args = parser.parse_args()
 
@@ -122,7 +126,15 @@ def main():
     model.eval()
 
     dataset = load_dataset(args.dataset, args.config, split=args.split)
-    dataset = dataset.select(range(min(args.samples, len(dataset))))
+    if args.samples is not None:
+        n = min(args.samples, len(dataset))
+        dataset = dataset.select(range(n))
+
+    # build fixed output path
+    safe_model = args.model.replace("/", "_")    # sanitize for filesystem
+    output_path = os.path.join(
+        "reproduction", "final_out", "logits", safe_model, f"{args.dataset}.json"
+    )
 
     records = []
     eos = [tokenizer.eos_token_id]
@@ -136,10 +148,20 @@ def main():
             "baseline": [b.tolist() for b in base_logits],
         })
 
-    os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
-    with open(args.output, "w") as f:
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w") as f:
         json.dump(records, f)
 
 
 if __name__ == "__main__":
     main()
+
+    """
+    Example usage:
+    python -m reproduction.logit_test 
+    --model llama3 
+    --dataset wikitext 
+    --text_column text 
+    --split test 
+    --samples 10
+    """
