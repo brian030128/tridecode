@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from tree_decoding import SearchNode, SearchTree, generate_causal_mask, gc
+from reproduction.tree_decoding import SearchNode, SearchTree, generate_causal_mask, gc
 
 # Available model shortcuts used by other experiments
 MODEL_CHOICES = {
@@ -36,8 +36,12 @@ def set_seed(seed: int) -> None:
 
 
 def record_baseline_logits(
-    model, tokenizer, prompt: str, beam_width: int,
-    max_new_tokens: int, eos_token_id: List[int]
+    model,
+    tokenizer,
+    prompt: str,
+    beam_width: int,
+    max_new_tokens: int,
+    eos_token_id: List[int],
 ):
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     with torch.no_grad():
@@ -51,8 +55,21 @@ def record_baseline_logits(
             early_stopping=False,
             return_dict_in_generate=True,
             output_scores=True,
+            output_attentions=False,
+            output_hidden_states=False,
         )
-    return [F.log_softmax(score, dim=-1).cpu() for score in out.scores]
+
+    logits = [F.log_softmax(score, dim=-1).cpu() for score in out.scores]
+
+    sequences = out.sequences[:, inputs.input_ids.shape[1] :]
+    indices = out.beam_indices[:, inputs.input_ids.shape[1] :]
+    steps = []
+    for i in range(sequences.shape[1]):
+        tokens = sequences[:, i].tolist()
+        parents = indices[:, i].tolist()
+        steps.append({"tokens": tokens, "parents": parents})
+
+    return logits, steps
 
 
 def record_trie_logits(
@@ -62,6 +79,7 @@ def record_trie_logits(
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     input_ids = inputs.input_ids
     logits_list = []
+    tree_steps = []
     past_key_values = DynamicCache()
     with torch.no_grad():
         outputs = model(input_ids, past_key_values=past_key_values, use_cache=True, num_logits_to_keep=1)
@@ -78,6 +96,7 @@ def record_trie_logits(
             newest_branch.append(node)
             searchTree.root.append(node)
             searchTree.node_count += 1
+        tree_steps.append({"tokens": [t.item() for t in tokens[0]], "parents": [-1] * beam_width})
         for step in range(input_ids.shape[1], max_new_tokens + input_ids.shape[1]):
             position_ids = torch.tensor([[step for _ in range(beam_width)]], device=model.device)
             attention_mask = generate_causal_mask(searchTree, input_ids.shape[1], newest_branch)
@@ -99,6 +118,8 @@ def record_trie_logits(
             next_indices = torch.div(tokens, vocab_size, rounding_mode="floor")
             tokens = tokens % vocab_size
             tmp_newest_branch = []
+            step_tokens = []
+            step_parents = []
             for j in range(len(tokens)):
                 token_id = tokens[j]
                 node = SearchNode(searchTree, idx, token_id, topk_scores[j])
@@ -109,12 +130,16 @@ def record_trie_logits(
                     newest_branch[next_indices[j]].add_children(node)
                     tmp_newest_branch.append(node)
                     idx += 1
+                    step_tokens.append(token_id.item())
+                    step_parents.append(int(next_indices[j]))
                 if len(tmp_newest_branch) >= beam_width:
                     break
             newest_branch = tmp_newest_branch
+            if step_tokens:
+                tree_steps.append({"tokens": step_tokens, "parents": step_parents})
             if len(newest_branch) == 0:
                 break
-    return logits_list
+    return logits_list, tree_steps
 
 
 def main():
@@ -160,12 +185,28 @@ def main():
     eos = [tokenizer.eos_token_id]
     for sample in dataset:
         prompt = sample[ds_info["text_column"]]
-        tree_logits = record_trie_logits(model, tokenizer, prompt, args.beam_width, args.max_new_tokens, eos)
-        base_logits = record_baseline_logits(model, tokenizer, prompt, args.beam_width, args.max_new_tokens, eos)
+        tree_logits, tree_steps = record_trie_logits(
+            model,
+            tokenizer,
+            prompt,
+            args.beam_width,
+            args.max_new_tokens,
+            eos,
+        )
+        base_logits, base_steps = record_baseline_logits(
+            model,
+            tokenizer,
+            prompt,
+            args.beam_width,
+            args.max_new_tokens,
+            eos,
+        )
         records.append({
             "prompt": prompt,
             "tree": [t.tolist() for t in tree_logits],
             "baseline": [b.tolist() for b in base_logits],
+            "tree_structure": tree_steps,
+            "baseline_structure": base_steps,
         })
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -182,7 +223,7 @@ if __name__ == "__main__":
         --model llama3 \
         --dataset human_eval \
         --samples 10
-        
+
 
     Available models: llama3, phi35, mistral, llama3_70b
     Available datasets: human_eval, gsm8k, cnn, wmt

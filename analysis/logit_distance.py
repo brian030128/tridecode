@@ -41,13 +41,43 @@ def distance_different_tree(tree: list[np.ndarray], base: list[np.ndarray], metr
     return float(np.mean(dists))
 
 
+def _distance_after_diverge(
+    tree: list[np.ndarray],
+    base: list[np.ndarray],
+    tree_steps: list[dict],
+    base_steps: list[dict],
+    metric: str,
+    use_tree: bool,
+) -> float:
+    """Compute average distance after decoding trees diverge."""
+    steps = min(len(tree_steps), len(base_steps), len(tree), len(base))
+    if steps == 0:
+        return 0.0
+
+    diverge = None
+    for i in range(steps):
+        if tree_steps[i] != base_steps[i]:
+            diverge = i
+            break
+    if diverge is None:
+        return 0.0
+
+    dists: list[float] = []
+    for j in range(diverge, steps):
+        if use_tree:
+            dists.append(_step_tree_distance(tree[j], base[j], metric))
+        else:
+            dists.append(compute_distance(tree[j].ravel(), base[j].ravel(), metric))
+    return float(np.mean(dists)) if dists else 0.0
+
+
 def main():
     parser = argparse.ArgumentParser(description="Compute distance between logit distributions")
     parser.add_argument("logit_file", help="JSON file produced by logit_test.py")
     parser.add_argument("--metric", choices=["mse", "cosine"], default="mse")
     parser.add_argument(
         "--mode",
-        choices=["index", "tree"],
+        choices=["index", "tree", "index_after_diverge", "tree_after_diverge"],
         default="index",
         help="Comparison strategy when beam structures differ",
     )
@@ -58,9 +88,23 @@ def main():
     for sample in data:
         tree = [np.array(t) for t in sample["tree"]]
         base = [np.array(b) for b in sample["baseline"]]
+        tree_steps = sample.get("tree_structure", [])
+        base_steps = sample.get("baseline_structure", [])
+
         if args.mode == "tree":
             distances.append(distance_different_tree(tree, base, args.metric))
             continue
+        if args.mode == "index_after_diverge":
+            distances.append(
+                _distance_after_diverge(tree, base, tree_steps, base_steps, args.metric, False)
+            )
+            continue
+        if args.mode == "tree_after_diverge":
+            distances.append(
+                _distance_after_diverge(tree, base, tree_steps, base_steps, args.metric, True)
+            )
+            continue
+
         steps = min(len(tree), len(base))
         for i in range(steps):
             distances.append(compute_distance(tree[i].ravel(), base[i].ravel(), args.metric))
