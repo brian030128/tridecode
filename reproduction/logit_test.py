@@ -10,6 +10,22 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from tree_decoding import SearchNode, SearchTree, generate_causal_mask, gc
+
+# Available model shortcuts used by other experiments
+MODEL_CHOICES = {
+    "llama3": "meta-llama/Llama-3.1-8B-Instruct",
+    "phi35": "microsoft/Phi-3.5-mini-instruct",
+    "mistral": "mistralai/Mistral-Small-24B-Instruct-2501",
+    "llama3_70b": "meta-llama/Llama-3.1-70B-Instruct",
+}
+
+# Datasets used in the reproduction experiments
+DATASET_CHOICES = {
+    "human_eval": {"path": "openai_humaneval", "config": None, "split": "test", "text_column": "prompt"},
+    "gsm8k": {"path": "openai/gsm8k", "config": "main", "split": "test", "text_column": "question"},
+    "cnn": {"path": "abisee/cnn_dailymail", "config": "3.0.0", "split": "train+validation+test", "text_column": "article"},
+    "wmt": {"path": "wmt/wmt_t2t", "config": None, "split": "train", "text_column": "translation"},
+}
 from transformers.cache_utils import DynamicCache
 
 
@@ -103,11 +119,8 @@ def record_trie_logits(
 
 def main():
     parser = argparse.ArgumentParser(description="Compare logits between trie decoding and baseline beam search")
-    parser.add_argument("--model", required=True, help="Model name or path")
-    parser.add_argument("--dataset", required=True, help="Dataset name to load via datasets library")
-    parser.add_argument("--text_column", default="text", help="Column in dataset containing text prompts")
-    parser.add_argument("--split", default="test", help="Dataset split")
-    parser.add_argument("--config", default=None, help="Dataset config name")
+    parser.add_argument("--model", choices=MODEL_CHOICES.keys(), help="Model choice")
+    parser.add_argument("--dataset", choices=DATASET_CHOICES.keys(), help="Dataset choice")
     parser.add_argument(
         "--samples",
         type=int,
@@ -121,25 +134,32 @@ def main():
 
     set_seed(args.seed)
 
-    model = AutoModelForCausalLM.from_pretrained(args.model)
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    model_name = MODEL_CHOICES[args.model]
+    ds_info = DATASET_CHOICES[args.dataset]
+
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     model.eval()
 
-    dataset = load_dataset(args.dataset, args.config, split=args.split)
+    dataset = load_dataset(ds_info["path"], ds_info["config"], split=ds_info["split"])
     if args.samples is not None:
         n = min(args.samples, len(dataset))
         dataset = dataset.select(range(n))
 
     # build fixed output path
-    safe_model = args.model.replace("/", "_")    # sanitize for filesystem
+    safe_model = args.model.replace("/", "_")
     output_path = os.path.join(
-        "reproduction", "final_out", "logits", safe_model, f"{args.dataset}.json"
+        "reproduction",
+        "final_out",
+        "logits",
+        safe_model,
+        f"{args.dataset}.json",
     )
 
     records = []
     eos = [tokenizer.eos_token_id]
     for sample in dataset:
-        prompt = sample[args.text_column]
+        prompt = sample[ds_info["text_column"]]
         tree_logits = record_trie_logits(model, tokenizer, prompt, args.beam_width, args.max_new_tokens, eos)
         base_logits = record_baseline_logits(model, tokenizer, prompt, args.beam_width, args.max_new_tokens, eos)
         records.append({
@@ -158,10 +178,11 @@ if __name__ == "__main__":
 
     """
     Example usage:
-    python -m reproduction.logit_test 
-    --model llama3 
-    --dataset wikitext 
-    --text_column text 
-    --split test 
-    --samples 10
+    python -m reproduction.logit_test \
+        --model llama3 \
+        --dataset human_eval \
+        --samples 10
+
+    Available models: llama3, phi35, mistral, llama3_70b
+    Available datasets: human_eval, gsm8k, cnn, wmt
     """
