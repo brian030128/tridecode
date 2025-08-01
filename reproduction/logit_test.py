@@ -117,7 +117,7 @@ def record_trie_logits(
         tree_steps.append({"tokens": [t.item() for t in tokens[0]], "parents": [-1] * beam_width})
         for step in range(input_ids.shape[1], max_new_tokens + input_ids.shape[1]):
             position_ids = torch.tensor([[step for _ in range(beam_width)]], device=model.device)
-            attention_mask = generate_causal_mask(searchTree, input_ids.shape[1], newest_branch)
+            attention_mask = generate_causal_mask(searchTree, input_ids.shape[1], newest_branch).to(model.device)
             step_input_ids = torch.tensor([[node.token_id for node in newest_branch]], device=model.device)
             outputs = model(step_input_ids, past_key_values=past_key_values,
                             position_ids=position_ids, attention_mask=attention_mask, use_cache=True)
