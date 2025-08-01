@@ -61,14 +61,32 @@ def record_baseline_logits(
 
     logits = [F.log_softmax(score, dim=-1).cpu() for score in out.scores]
 
-    sequences = out.sequences[:, inputs.input_ids.shape[1] :]
-    indices = out.beam_indices[:, inputs.input_ids.shape[1] :]
+    # Reconstruct beam tokens/parents from logits to capture the full beam tree
+    vocab_size = logits[0].shape[-1]
     steps = []
-    for i in range(sequences.shape[1]):
-        tokens = sequences[:, i].tolist()
-        parents = indices[:, i].tolist()
-        steps.append({"tokens": tokens, "parents": parents})
+    eos = set(eos_token_id)
+    beam_scores = torch.full((beam_width,), float("-inf"))
+    beam_scores[0] = 0.0
 
+    first_scores = logits[0][0]
+    topk_scores, topk_tokens = torch.topk(first_scores, beam_width, dim=-1)
+    steps.append({"tokens": topk_tokens.tolist(), "parents": [-1] * beam_width})
+    beam_scores = topk_scores
+
+    for log_prob in logits[1:]:
+        scores = log_prob + beam_scores.view(-1, 1)
+        flat_scores = scores.view(-1)
+        topk_scores, topk_ids = torch.topk(flat_scores, beam_width, dim=0, largest=True, sorted=True)
+        next_beams = (topk_ids // vocab_size).to(torch.long)
+        next_tokens = topk_ids % vocab_size
+        steps.append({"tokens": next_tokens.tolist(), "parents": next_beams.tolist()})
+        beam_scores = topk_scores
+        eos_mask = torch.tensor([t.item() in eos for t in next_tokens], dtype=torch.bool)
+        beam_scores = beam_scores.masked_fill(eos_mask, float("-inf"))
+        if eos_mask.all():
+            break
+
+    logits = logits[: len(steps)]
     return logits, steps
 
 

@@ -9,7 +9,12 @@ def compute_distance(a: np.ndarray, b: np.ndarray, metric: str) -> float:
     """Return distance between two 1-D arrays using the selected metric."""
     if metric == "mse":
         return float(np.mean((a - b) ** 2))
-    return float(cosine(a, b))
+    if metric == "cosine":
+        return float(cosine(a, b))
+    if metric == "kl":
+        pa = np.exp(a)
+        return float(np.sum(pa * (a - b)))
+    raise ValueError(f"Unknown metric: {metric}")
 
 
 def _step_tree_distance(step_a: np.ndarray, step_b: np.ndarray, metric: str) -> float:
@@ -71,13 +76,43 @@ def _distance_after_diverge(
     return float(np.mean(dists)) if dists else 0.0
 
 
+def _distance_until_diverge(
+    tree: list[np.ndarray],
+    base: list[np.ndarray],
+    tree_steps: list[dict],
+    base_steps: list[dict],
+    metric: str,
+    use_tree: bool,
+) -> float:
+    """Compute average distance up to the point where decoding trees diverge."""
+    steps = min(len(tree_steps), len(base_steps), len(tree), len(base))
+    if steps == 0:
+        return 0.0
+    dists: list[float] = []
+    for i in range(steps):
+        if tree_steps[i] != base_steps[i]:
+            break
+        if use_tree:
+            dists.append(_step_tree_distance(tree[i], base[i], metric))
+        else:
+            dists.append(compute_distance(tree[i].ravel(), base[i].ravel(), metric))
+    return float(np.mean(dists)) if dists else 0.0
+
+
 def main():
     parser = argparse.ArgumentParser(description="Compute distance between logit distributions")
     parser.add_argument("logit_file", help="JSON file produced by logit_test.py")
-    parser.add_argument("--metric", choices=["mse", "cosine"], default="mse")
+    parser.add_argument("--metric", choices=["mse", "cosine", "kl"], default="mse")
     parser.add_argument(
         "--mode",
-        choices=["index", "tree", "index_after_diverge", "tree_after_diverge"],
+        choices=[
+            "index",
+            "tree",
+            "index_until_diverge",
+            "tree_until_diverge",
+            "index_after_diverge",
+            "tree_after_diverge",
+        ],
         default="index",
         help="Comparison strategy when beam structures differ",
     )
@@ -93,6 +128,16 @@ def main():
 
         if args.mode == "tree":
             distances.append(distance_different_tree(tree, base, args.metric))
+            continue
+        if args.mode == "index_until_diverge":
+            distances.append(
+                _distance_until_diverge(tree, base, tree_steps, base_steps, args.metric, False)
+            )
+            continue
+        if args.mode == "tree_until_diverge":
+            distances.append(
+                _distance_until_diverge(tree, base, tree_steps, base_steps, args.metric, True)
+            )
             continue
         if args.mode == "index_after_diverge":
             distances.append(
