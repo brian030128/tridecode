@@ -245,3 +245,12 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+    """
+    Example usage:  
+    python -m reproduction.logit_distance_runtime \
+        --model llama3 \
+        --dataset human_eval \
+        --samples 10 \
+        --output analysis/results/logits/llama3/human_eval.json
+    """
