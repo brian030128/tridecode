@@ -1,3 +1,23 @@
+"""
+Explanation:
+
+### Notation:
+* B = beam width (rows in each logit matrix)
+* V = vocabulary size (columns)
+
+At a decoding step t:
+* T[t] ∈ ℝ^{BxV} - trie-search logits
+* B[t] ∈ ℝ^{BxV} - baseline logits
+* Ts[t], Bs[t] - tree-state dicts describing which tokens/paths occupy each beam
+
+### Comparison modes:
+1. Index distance:	
+* compute_distance(T[t].ravel(), B[t].ravel()) → treats each (B,V) matrix as one long vector of length B·V. Fast, but assumes row i in the trie corresponds to row i in the baseline.
+
+2. Tree distance:
+* _step_tree_distance(T[t], B[t]) → builds a BxB distance matrix between beam rows, takes symmetric Chamfer average (mean row-min + mean col-min)/2. Robust to permuted or partially mismatched beams.
+"""
+
 import argparse
 import csv
 import json
@@ -135,7 +155,7 @@ def main() -> None:
             "index_after_diverge",
             "tree_after_diverge",
         ],
-        default="index",
+        default="tree_until_diverge",
         help="Comparison strategy when beam structures differ",
     )
     parser.add_argument("--seed", type=int, default=1234)
