@@ -22,6 +22,7 @@ import argparse
 import csv
 import json
 from typing import List
+import os
 
 import numpy as np
 from datasets import load_dataset
@@ -200,6 +201,17 @@ def main() -> None:
         tree = [t.numpy() for t in tree_logits]
         base = [b.numpy() for b in base_logits]
 
+        for i in range(min(len(tree), len(base))):
+            print(
+                f"Step {i}: trie logits shape {tree[i].shape}, baseline logits shape {base[i].shape}"
+            )
+            max_diff = np.max(np.abs(tree[i] - base[i]))
+            print(f"Step {i}: max abs diff {max_diff}")
+            if i < min(len(tree_steps), len(base_steps)) and tree_steps[i] != base_steps[i]:
+                print(f"Beam divergence at step {i}:")
+                print(f"  tree_steps[{i}]: {tree_steps[i]}")
+                print(f"  base_steps[{i}]: {base_steps[i]}")
+
         if args.mode == "tree":
             for m in METRICS:
                 distances[m].append(distance_different_tree(tree, base, m))
@@ -250,6 +262,7 @@ def main() -> None:
             {m: distances[m][i] for m in METRICS}
             for i in range(len(next(iter(distances.values()), [])))
         ]
+        os.makedirs(os.path.dirname(args.output), exist_ok=True)
         if args.output.endswith(".json"):
             with open(args.output, "w") as f:
                 json.dump(records, f)

@@ -100,11 +100,24 @@ def record_trie_logits(
     tree_steps = []
     past_key_values = DynamicCache()
     with torch.no_grad():
-        outputs = model(input_ids, past_key_values=past_key_values, use_cache=True, num_logits_to_keep=1)
+        outputs = model(
+            input_ids,
+            past_key_values=past_key_values,
+            use_cache=True,
+            num_logits_to_keep=1,
+        )
         log_probs = F.log_softmax(outputs.logits[:, -1, :].float(), dim=-1)
-        logits_list.append(log_probs.cpu())
+        # Expand the initial logits to ``beam_width`` rows so that the first step
+        # matches the shape produced by standard beam search.
+        logits_list.append(log_probs.expand(beam_width, -1).cpu())
         past_key_values = outputs.past_key_values
-        token_scores, tokens = torch.topk(log_probs, beam_width, dim=-1, largest=True, sorted=True)
+        token_scores, tokens = torch.topk(
+            log_probs,
+            beam_width,
+            dim=-1,
+            largest=True,
+            sorted=True,
+        )
         searchTree = SearchTree(model, beam_width=beam_width)
         newest_branch = []
         idx = 0
