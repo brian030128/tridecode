@@ -286,4 +286,7 @@ if __name__ == "__main__":
         --dataset human_eval \
         --samples 10 \
         --output analysis/results/logits/llama3/human_eval.json
+
+    Available models: llama3, phi35, mistral, llama3_70b
+    Available datasets: human_eval, mbpp, code_contests
     """
