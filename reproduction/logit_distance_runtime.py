@@ -282,18 +282,18 @@ if __name__ == "__main__":
     """
     Example usage:  
     python -m reproduction.logit_distance_runtime \
-        --model llama3 \
+        --model mistral \
         --dataset human_eval \
         --samples 10 \
-        --output analysis/results/logits/llama3/human_eval.json
+        --output analysis/results/logits/mistral/human_eval.json
 
     Available models: llama3, phi35, mistral, llama3_70b
     Available datasets: human_eval, gsm8k, cnn, wmt
 
     Test case:
-    1. llama3, human_eval, 10 samples
-    2. phi35, human_eval, 10 samples
-    3. mistral, gsm8k, 10 samples
+    1. llama3, human_eval, 10 samples -> 0
+    2. phi35, human_eval, 10 samples -> 0
+    3. mistral, gsm8k, 10 samples -> 0
     ---
     4. llama3_70b, cnn, 10 samples
     5. phi35, cnn, 10 samples
