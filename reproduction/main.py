@@ -91,8 +91,8 @@ def test_model(model_type:ModelType, tree_params, origin_params):
         #torch_dtype=torch.float16
     )
 
-    from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask
-    run_task(model_type,model,tokenizer,HumanEvalTask(),range(164), tree_params, origin_params)
+    from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask, Math500Task
+    run_task(model_type,model,tokenizer,Math500Task(),range(100), tree_params, origin_params)
     #run_task(model_type,model,tokenizer,CNNSumTask(),range(100), tree_params, origin_params)
 
 
@@ -104,8 +104,15 @@ parameters = [
     (15,1000)
 ]
 
-print("wwwarawrwarwarwarawr")
-test_model(ModelType.LLAMA3, [(9,1000)], [])
+trie_paramters = [
+    (3, 1000),
+    (9 , 1000),
+    (15,1000)
+]
+
+test_model(ModelType.PHI35, trie_paramters, parameters)
+test_model(ModelType.LLAMA3, trie_paramters, parameters)
+test_model(ModelType.MISTRAL, trie_paramters, parameters)
 #test_model(ModelType.PHI35, [(3, 400)], [])
 #from modification_test import write_out
 #write_out()

@@ -2,6 +2,7 @@ from model_type import ModelType
 
 from enum import Enum
 import json
+import re
 
 import datasets
 from datasets import load_dataset
@@ -11,6 +12,7 @@ class TaskType(Enum):
     GSM8K = 2
     CNN = 3
     WMT = 4
+    MATH500 = 5
 
 
 class Task:
@@ -310,4 +312,64 @@ Translate the following text to english directly.<|end|>
             batched=True
         )
         return ds
+
+
+class Math500Task(Task):
+    def llama3(self, prompt) -> str:
+        return f"""<|start_header_id|>system<|end_header_id|>
+               Please reason step by step, and put your final answer within 'boxed'.
+                <|eot_id|><|start_header_id|>user<|end_header_id|>
+{prompt}
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                """
+    def mistral(self, prompt) -> str:
+        return f"""
+                <s>[SYSTEM_PROMPT]Please reason step by step, and put your final answer within 'boxed'.[/SYSTEM_PROMPT][INST]
+                {prompt}[/INST]
+            """
+    
+    def phi(self, prompt) -> str:
+        return f"""<|system|>
+Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end|>
+<|user|>
+{prompt}<|end|>
+<|assistant|>"""
+    def get_prompt(self, model: ModelType, prompt: str) -> str:
+        match model:
+            case ModelType.PHI35:
+                return self.phi(prompt)
+            case ModelType.LLAMA3:
+                return self.llama3(prompt)
+            case ModelType.LLAMA3_70B:
+                return self.llama3(prompt)
+            case ModelType.MISTRAL:
+                return self.mistral(prompt)
+
+    def extract_answer(self, text) -> str:
+        match = re.search(r'\\boxed\{([^}]*)\}', text)
+        if match:
+            answer = match.group(1)
+        return answer
+
+
+    def type(self) -> TaskType:
+        return TaskType.MATH500
+
+    def get_ds(self):
+        ds = load_dataset("HuggingFaceH4/MATH-500")
+        ds = ds.map(
+            Math500Task.convert_format,
+            batched=True
+        )
+        return ds
+    
+    @staticmethod
+    def convert_format(d):
+        return {
+            'text': d['problem'],
+            'answer': d['answer']
+        }
+
+
+
 
