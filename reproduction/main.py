@@ -43,7 +43,7 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
     #     for metric in metrics:
     #         out_file.write(json.dumps(metric.to_dict()) + "\n")
     with open(f"out/{model_type.name}/sample.jsonl", "w") as out_file:
-        metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, 0,0)
+        metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type)
         for metric in metrics:
             out_file.write(json.dumps(metric.to_dict()) + "\n")
 
