@@ -346,10 +346,7 @@ Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end
                 return self.mistral(prompt)
 
     def extract_answer(self, text) -> str:
-        match = re.search(r'\\boxed\{([^}]*)\}', text)
-        if match:
-            answer = match.group(1)
-        return answer
+        return text
 
 
     def type(self) -> TaskType:
