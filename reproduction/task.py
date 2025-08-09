@@ -356,7 +356,7 @@ Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end
         return TaskType.MATH500
 
     def get_ds(self):
-        ds = load_dataset("HuggingFaceH4/MATH-500")
+        ds = load_dataset("HuggingFaceH4/MATH-500", split='test')
         ds = ds.map(
             Math500Task.convert_format,
             batched=True
