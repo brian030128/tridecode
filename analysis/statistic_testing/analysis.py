@@ -129,9 +129,18 @@ def analyze_pair(orig_path: str, tree_path: str) -> dict:
     return res
 
 
-# beam = 1
-def analyze_origin_only(orig_path: str) -> dict:
-    df = load_jsonl(orig_path)
+def analyze_single(path: str, label: str) -> dict:
+    """Describe metrics for a single set of results.
+
+    Parameters
+    ----------
+    path:
+        Path to the jsonl file to analyse.
+    label:
+        Prefix to use for the recorded statistics (e.g. ``orig`` or
+        ``sample``).
+    """
+    df = load_jsonl(path)
     df['tok_per_sec']   = compute_tok_per_sec(df)
     df['mem_per_token'] = compute_mem_per_token(df)
     df['score'] = _coerce_numeric(df['score'])
@@ -142,7 +151,7 @@ def analyze_origin_only(orig_path: str) -> dict:
     }
 
     for m in ['input_kv_memory', 'tok_per_sec', 'mem_per_token', 'score']:
-        _describe(df[m].astype(float), f"{m}_orig", res)
+        _describe(df[m].astype(float), f"{m}_{label}", res)
 
     # binary/continuous score mean already handled by _describe
     return res
@@ -154,12 +163,14 @@ def main(base_dir: str, output_csv: str):
     for model in os.listdir(base_dir):
         obase = os.path.join(base_dir, model, 'origin')
         tbase = os.path.join(base_dir, model, 'tree')
+        sbase = os.path.join(base_dir, model, 'sample')
         if not (os.path.isdir(obase) and os.path.isdir(tbase)):
             continue
 
         for dataset in os.listdir(obase):
             o_dir = os.path.join(obase, dataset)
             t_dir = os.path.join(tbase, dataset)
+            s_dir = os.path.join(sbase, dataset)
             if not os.path.isdir(o_dir):
                 continue
 
@@ -171,7 +182,7 @@ def main(base_dir: str, output_csv: str):
                 if os.path.exists(t_path):              # paired origin-vs-tree
                     stats = analyze_pair(o_path, t_path)
                 elif beam == 1:                         # origin-only baseline
-                    stats = analyze_origin_only(o_path)
+                    stats = analyze_single(o_path, 'orig')
                 else:
                     print(f"[WARN] Missing tree file {t_path}, skipping.")
                     continue
@@ -179,6 +190,15 @@ def main(base_dir: str, output_csv: str):
                 stats.update({'model': model, 'dataset': dataset,
                               'beam': beam, 'samples': samples})
                 summary.append(stats)
+
+            # Top-k sampling results live under "sample"; treat them like
+            # single-series baselines with their own label.
+            if os.path.isdir(s_dir):
+                for s_path in glob.glob(os.path.join(s_dir, '*.jsonl')):
+                    stats = analyze_single(s_path, 'sample')
+                    stats.update({'model': model, 'dataset': dataset,
+                                  'beam': 'sample', 'samples': 'n/a'})
+                    summary.append(stats)
 
     pd.DataFrame(summary).to_csv(output_csv, index=False)
     print(f"Analysis complete. Results saved to {output_csv}")
