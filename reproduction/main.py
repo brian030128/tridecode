@@ -91,7 +91,7 @@ def test_model(model_type:ModelType, tree_params, origin_params):
     model = AutoModelForCausalLM.from_pretrained(
         name(model_type),
         device_map="auto",
-        #torch_dtype=torch.float16
+        torch_dtype=torch.float16
     )
 
     from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask, Math500Task
