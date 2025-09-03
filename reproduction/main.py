@@ -97,7 +97,7 @@ def test_model(model_type:ModelType, tree_params, origin_params):
     )
 
     from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask, Math500Task
-    run_task(model_type,model,tokenizer,HumanEvalTask(),range(100), tree_params, origin_params)
+    #run_task(model_type,model,tokenizer,HumanEvalTask(),range(100), tree_params, origin_params)
     run_task(model_type,model,tokenizer,Math500Task(),range(100), tree_params, origin_params)
 
 
