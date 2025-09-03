@@ -84,7 +84,7 @@ def name(type):
         case ModelType.LLAMA3_70B:
             return "meta-llama/Llama-3.1-70B-Instruct"
         case ModelType.REASONING:
-            return "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+            return "nvidia/Nemotron-Research-Reasoning-Qwen-1.5B"
 
 
 def test_model(model_type:ModelType, tree_params, origin_params):
