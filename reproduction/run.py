@@ -112,7 +112,6 @@ def run_bench_mark(
                 add_generation_prompt=True,
                 enable_thinking=True,
             )
-            print(prompt)
         input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
         if input_ids.shape[1] + max_new_tokens > 6000:
             continue
