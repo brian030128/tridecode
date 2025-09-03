@@ -113,6 +113,10 @@ def run_bench_mark(
                 output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [model.config.eos_token_id])
             elif model_type == ModelType.PHI35:
                 output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens,  [32007, 32001, 32000] )
+            elif model_type == ModelType.REASONING:
+                output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [model.config.eos_token_id] )
+                
+
         except NotImplementedError:
             print("err")
             continue

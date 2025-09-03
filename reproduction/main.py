@@ -83,6 +83,8 @@ def name(type):
             return "mistralai/Mistral-Small-24B-Instruct-2501"
         case ModelType.LLAMA3_70B:
             return "meta-llama/Llama-3.1-70B-Instruct"
+        case ModelType.REASONING:
+            return "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
 
 
 def test_model(model_type:ModelType, tree_params, origin_params):
@@ -95,8 +97,8 @@ def test_model(model_type:ModelType, tree_params, origin_params):
     )
 
     from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask, Math500Task
-    run_task(model_type,model,tokenizer,CNNSumTask(),range(100), tree_params, origin_params)
-    #run_task(model_type,model,tokenizer,CNNSumTask(),range(100), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,HumanEvalTask(),range(100), tree_params, origin_params)
+    run_task(model_type,model,tokenizer,Math500Task(),range(100), tree_params, origin_params)
 
 
 # beams / max_tokens
@@ -123,4 +125,4 @@ trie_paramters = [
 #test_model(ModelType.MISTRAL, 
 #           [(15, 1000)],
 #           [])
-test_model(ModelType.LLAMA3_70B, [(3, 1000),(6, 1000)], [(1, 1000), (3, 1000), (6, 1000)])
+test_model(ModelType.REASONING, trie_paramters, parameters])
