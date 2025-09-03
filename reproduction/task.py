@@ -22,6 +22,8 @@ class Task:
         pass
     def llama3(self, prompt) -> str:
         pass
+    def qwen(self, prompt) -> str:
+        pass
     def get_prompt(self, model: ModelType, prompt: str) -> str:
         match model:
             case ModelType.PHI35:
@@ -32,6 +34,9 @@ class Task:
                 return self.llama3(prompt)
             case ModelType.MISTRAL:
                 return self.mistral(prompt)
+            case ModelType.REASONING:
+                return self.qwen(prompt)
+
             
     def extract_answer(self, text) -> str:
         pass
@@ -76,6 +81,9 @@ You are a programmer.<|end|>
 Complete the following function. No explaination is needed, output the code directly.
 {prompt}<|end|>
 <|assistant|>"""
+    def qwen(self, prompt) -> str:
+        return f"""Complete the following function. No explaination is needed, output the code directly.
+{prompt}"""
 
     
     def extract_answer(self, text) -> str:
@@ -334,6 +342,11 @@ Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end
 <|user|>
 {prompt}<|end|>
 <|assistant|>"""
+    
+    def qwen(self, prompt) -> str:
+        return f"""Please reason step by step, and put your final answer within '\\boxed{{}}'.
+        {prompt}"""
+    
     def get_prompt(self, model: ModelType, prompt: str) -> str:
         match model:
             case ModelType.PHI35:
@@ -344,6 +357,8 @@ Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end
                 return self.llama3(prompt)
             case ModelType.MISTRAL:
                 return self.mistral(prompt)
+            case ModelType.REASONING:
+                return self.qwen(prompt)
 
     def extract_answer(self, text) -> str:
         return text
