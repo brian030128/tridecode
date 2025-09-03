@@ -103,16 +103,16 @@ def test_model(model_type:ModelType, tree_params, origin_params):
 
 # beams / max_tokens
 parameters = [
-    (1, 1000),
-    (3, 1000),
-    (9 , 1000),
-    (15,1000)
+    (1, 2000),
+    (3, 2000),
+    (9 , 2000),
+    (15, 2000)
 ]
 
 trie_paramters = [
-    (3, 1000),
-    (9 , 1000),
-    (15,1000)
+    (3, 2000),
+    (9 , 2000),
+    (15, 2000)
 ]
 
 #test_model(ModelType.PHI35, trie_paramters, parameters)
