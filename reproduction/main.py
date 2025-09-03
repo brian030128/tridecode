@@ -125,4 +125,4 @@ trie_paramters = [
 #test_model(ModelType.MISTRAL, 
 #           [(15, 1000)],
 #           [])
-test_model(ModelType.REASONING, trie_paramters, parameters])
+test_model(ModelType.REASONING, trie_paramters, parameters)
