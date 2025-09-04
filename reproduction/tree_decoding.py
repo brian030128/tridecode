@@ -148,10 +148,10 @@ def prune_kv_cache(past_key_values, input_length, remove_idx: List[int]):
     #print("keep", keep_indices)
 
     for i in range(len(past_key_values)):
-        if keep_indices.device != past_key_values.key_cache[i].device:
-            keep_indices= keep_indices.to(past_key_values.key_cache[i].device)
-        past_key_values.key_cache[i] = torch.index_select(past_key_values.key_cache[i], 2, keep_indices)
-        past_key_values.value_cache[i] = torch.index_select(past_key_values.value_cache[i], 2, keep_indices)
+        if keep_indices.device != past_key_values.layers[i].keys.device:
+            keep_indices= keep_indices.to(past_key_values.layers[i].keys.device)
+        past_key_values.layers[i].keys = torch.index_select(past_key_values.layers[i].keys, 2, keep_indices)
+        past_key_values.layers[i].values = torch.index_select(past_key_values.layers[i].values, 2, keep_indices)
 
 def clear_cache():
     torch.cuda.empty_cache()
