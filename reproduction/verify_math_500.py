@@ -14,6 +14,11 @@ source = {
         "origin": ["1_1000.jsonl", "3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"],
         "tree": ["3_1000.jsonl", "9_1000.jsonl", "15_1000.jsonl"],
         "sample": ["sample.jsonl"]
+    },
+    "REASONING": {
+        "origin": ["1_2000.jsonl", "3_2000.jsonl", "6_2000.jsonl"],
+        "tree": ["3_1000.jsonl"],
+        "sample": ["sample.jsonl"]
     }
 }
 
