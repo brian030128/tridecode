@@ -113,7 +113,6 @@ parameters = [
 ]
 
 trie_paramters = [
-    (6, 2000)
 ]
 
 #test_model(ModelType.PHI35, trie_paramters, parameters)
