@@ -42,12 +42,19 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
     #     metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, None, 1000)
     #     for metric in metrics:
     #         out_file.write(json.dumps(metric.to_dict()) + "\n")
+<<<<<<< HEAD
 
     # with open(f"out/{model_type.name}/sample.jsonl", "w") as out_file:
     #     metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, max_new_tokens=2000)
     #     for metric in metrics:
     #         out_file.write(json.dumps(metric.to_dict()) + "\n")
 
+=======
+    #with open(f"out/{model_type.name}/sample.jsonl", "w") as out_file:
+    #    metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type)
+    #    for metric in metrics:
+    #        out_file.write(json.dumps(metric.to_dict()) + "\n")
+>>>>>>> 6cdd3d1 (update)
 
     for parameter in tree_params:
         if parameter[0] == 1:
@@ -86,7 +93,7 @@ def name(type):
         case ModelType.LLAMA3_70B:
             return "meta-llama/Llama-3.1-70B-Instruct"
         case ModelType.REASONING:
-            return "Qwen/Qwen3-4B-Thinking-2507"
+            return "Qwen/Qwen3-14B"
 
 
 def test_model(model_type:ModelType, tree_params, origin_params):
