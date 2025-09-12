@@ -344,10 +344,7 @@ Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end
 <|assistant|>"""
     
     def reasoning(self, prompt) -> str:
-        return f"""<|start|>system<|message|>
-Reasoning: low<|end|>
-<|start|>user<|message|>Solve the problem and place the final answer within '\\boxed{{}}'. {prompt}<|end|>
-<|start|>assistant"""
+        return f"""Solve the problem and place the final answer within '\\boxed{{}}'. {prompt}"""
     
     def get_prompt(self, model: ModelType, prompt: str) -> str:
         match model:
