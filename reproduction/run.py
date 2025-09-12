@@ -24,6 +24,7 @@ from openai_harmony import (
     Conversation,
     DeveloperContent,
     SystemContent,
+    ReasoningEffort
 )
 import GPUtil
 
@@ -115,7 +116,7 @@ def run_bench_mark(
             convo = Conversation.from_messages([
                 Message.from_role_and_content(
                     Role.SYSTEM,
-                    SystemContent.new().with_instructions("Reasoning: low"),
+                    SystemContent.new().with_reasoning_effort(ReasoningEffort.LOW),
                 ),
                 Message.from_role_and_content(
                     Role.USER,
