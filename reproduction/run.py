@@ -123,13 +123,9 @@ def run_bench_mark(
                     prompt
                 ),
             ])
-            input_ids = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
-            print(enc.decode_utf8(input_ids))
-            parsed = enc.parse_messages_from_completion_tokens(input_ids, role=Role.ASSISTANT)
-            print(parsed)
-            input_ids = torch.tensor(input_ids).unsqueeze(0)
-        else:
-            input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+            prompt = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
+            prompt = enc.decode_utf8(prompt)
+        input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
         if input_ids.shape[1] + max_new_tokens > 6000:
             continue
         start = time.time()
