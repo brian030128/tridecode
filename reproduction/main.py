@@ -99,10 +99,11 @@ def test_model(model_type:ModelType, tree_params, origin_params):
 
 # beams / max_tokens
 parameters = [
-    (6, 2000)
+    (6, 1000)
 ]
 
 trie_paramters = [
+    (6, 1000)
 ]
 
 #test_model(ModelType.PHI35, trie_paramters, parameters)
