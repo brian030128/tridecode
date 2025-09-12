@@ -125,6 +125,7 @@ def run_bench_mark(
             ])
             prompt = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
             prompt = enc.decode_utf8(prompt)
+            print(prompt)
         input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
         if input_ids.shape[1] + max_new_tokens > 6000:
             continue
@@ -137,7 +138,7 @@ def run_bench_mark(
             elif model_type == ModelType.PHI35:
                 output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens,  [32007, 32001, 32000] )
             elif model_type == ModelType.REASONING:
-                output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [200002,199999,200012] )
+                output, memory_usage, time_metric = generate(model, tokenizer, prompt, num_beams, max_new_tokens, [model.config.eos_token_id] )
                 
 
         except NotImplementedError:
