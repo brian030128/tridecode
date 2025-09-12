@@ -19,7 +19,7 @@ def get_gpu_usage():
     gpus = GPUtil.getGPUs()
     return gpus[0].memoryUsed
 
-dtype = torch.float16
+dtype = torch.bfloat16
 minFloat = torch.finfo(dtype).min
 device = "cuda" if torch.cuda.is_available() else "cpu"
 class SearchNode:
