@@ -120,7 +120,7 @@ def run_bench_mark(
                 ),
                 Message.from_role_and_content(
                     Role.USER,
-                    DeveloperContent.new().with_instructions(prompt)
+                    prompt
                 ),
             ])
             prompt = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
