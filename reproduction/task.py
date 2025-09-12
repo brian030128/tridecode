@@ -22,7 +22,7 @@ class Task:
         pass
     def llama3(self, prompt) -> str:
         pass
-    def qwen(self, prompt) -> str:
+    def reasoning(self, prompt) -> str:
         pass
     def get_prompt(self, model: ModelType, prompt: str) -> str:
         match model:
@@ -35,7 +35,7 @@ class Task:
             case ModelType.MISTRAL:
                 return self.mistral(prompt)
             case ModelType.REASONING:
-                return self.qwen(prompt)
+                return self.reasoning(prompt)
 
             
     def extract_answer(self, text) -> str:
@@ -81,7 +81,7 @@ You are a programmer.<|end|>
 Complete the following function. No explaination is needed, output the code directly.
 {prompt}<|end|>
 <|assistant|>"""
-    def qwen(self, prompt) -> str:
+    def reasoning(self, prompt) -> str:
         return f"""Complete the following function. No explaination is needed, output the code directly.
 {prompt}"""
 
@@ -343,9 +343,11 @@ Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end
 {prompt}<|end|>
 <|assistant|>"""
     
-    def qwen(self, prompt) -> str:
-        return f"""Please reason step by step, and put your final answer within '\\boxed{{}}'.
-        {prompt}"""
+    def reasoning(self, prompt) -> str:
+        return f"""<|start|>system<|message|>
+Reasoning: low<|end|>
+<|start|>user<|message|>Solve the problem and place the final answer within '\\boxed{{}}'. {prompt}<|end|>
+<|start|>assistant"""
     
     def get_prompt(self, model: ModelType, prompt: str) -> str:
         match model:
@@ -358,7 +360,7 @@ Please reason step by step, and put your final answer within '\\boxed{{}}'.<|end
             case ModelType.MISTRAL:
                 return self.mistral(prompt)
             case ModelType.REASONING:
-                return self.qwen(prompt)
+                return self.reasoning(prompt)
 
     def extract_answer(self, text) -> str:
         return text
