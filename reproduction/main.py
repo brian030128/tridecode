@@ -35,13 +35,13 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
     ds = task.get_ds()
 
 
-    # path = f"out/{model_type.name}/sample/{task.type().name}"
-    # os.makedirs(path, exist_ok=True)
-    # print("processing sample " )
-    # with open(f"{path}/sample.jsonl", "w") as out_file:
-    #     metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, None, 1000)
-    #     for metric in metrics:
-    #         out_file.write(json.dumps(metric.to_dict()) + "\n")
+    path = f"out/{model_type.name}/sample/{task.type().name}"
+    os.makedirs(path, exist_ok=True)
+    print("processing sample " )
+    with open(f"{path}/sample.jsonl", "w") as out_file:
+        metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, None, 1000)
+        for metric in metrics:
+            out_file.write(json.dumps(metric.to_dict()) + "\n")
 
     for parameter in tree_params:
         if parameter[0] == 1:
@@ -89,7 +89,7 @@ def test_model(model_type:ModelType, tree_params, origin_params):
     model = AutoModelForCausalLM.from_pretrained(
         name(model_type),
         device_map="auto",
-        torch_dtype=torch.bfloat16
+        torch_dtype=torch.float16
     )
 
     from task import HumanEvalTask, Gsm8kTask,CNNSumTask, WMTTransTask, Math500Task
@@ -99,10 +99,14 @@ def test_model(model_type:ModelType, tree_params, origin_params):
 
 # beams / max_tokens
 parameters = [
+    (1, 1000),
+    (3, 1000),
     (6, 1000)
 ]
 
 trie_paramters = [
+    (3, 1000),
+    (6, 1000)
 ]
 
 #test_model(ModelType.PHI35, trie_paramters, parameters)
@@ -115,4 +119,4 @@ trie_paramters = [
 #test_model(ModelType.MISTRAL, 
 #           [(15, 1000)],
 #           [])
-test_model(ModelType.REASONING, trie_paramters, parameters)
+test_model(ModelType.MISTRAL, trie_paramters, parameters)
