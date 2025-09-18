@@ -38,10 +38,10 @@ def run_task(model_type, model, tokenizer ,task: Task, data_num: range, tree_par
     path = f"out/{model_type.name}/sample/{task.type().name}"
     os.makedirs(path, exist_ok=True)
     print("processing sample " )
-    with open(f"{path}/sample.jsonl", "w") as out_file:
-        metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, None, 1000)
-        for metric in metrics:
-            out_file.write(json.dumps(metric.to_dict()) + "\n")
+    # with open(f"{path}/sample.jsonl", "w") as out_file:
+    #     metrics = run_bench_mark(model, tokenizer, ds.select(data_num), sampling_generate, task, model_type, None, 1000)
+    #     for metric in metrics:
+    #         out_file.write(json.dumps(metric.to_dict()) + "\n")
 
     for parameter in tree_params:
         if parameter[0] == 1:
