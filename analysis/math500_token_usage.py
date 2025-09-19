@@ -37,6 +37,23 @@ def coerce_int(value: Optional[int]) -> Optional[int]:
         return None
 
 
+def extract_beam_size(jsonl_path: Path, decode_dir: str) -> Optional[int]:
+    """Infer the beam size from the file name when present (origin/tree only)."""
+
+    if decode_dir not in {"origin", "tree"}:
+        return None
+
+    stem = jsonl_path.stem
+    if not stem:
+        return None
+
+    prefix = stem.split("_", 1)[0]
+    try:
+        return int(prefix)
+    except ValueError:
+        return None
+
+
 def iter_records(base_dir: Path) -> Iterator[Dict[str, object]]:
     """Yield per-problem records with token statistics."""
 
@@ -47,6 +64,8 @@ def iter_records(base_dir: Path) -> Iterator[Dict[str, object]]:
                 continue
 
             for jsonl_path in sorted(math500_dir.glob("*.jsonl")):
+                beam_size = extract_beam_size(jsonl_path, decode_dir)
+
                 with jsonl_path.open("r", encoding="utf-8") as handle:
                     for line_number, raw_line in enumerate(handle, start=1):
                         raw_line = raw_line.strip()
@@ -81,6 +100,7 @@ def iter_records(base_dir: Path) -> Iterator[Dict[str, object]]:
                         yield {
                             "model": model_label,
                             "decoding_method": decode_label,
+                            "beam_size": beam_size,
                             "problem_id": problem_key,
                             "input_tokens": input_tokens,
                             "output_tokens": output_tokens,
@@ -97,6 +117,7 @@ def write_detailed_csv(rows: List[Dict[str, object]], output_path: Path) -> None
     fieldnames = [
         "model",
         "decoding_method",
+        "beam_size",
         "problem_id",
         "input_tokens",
         "output_tokens",
@@ -117,14 +138,14 @@ def write_detailed_csv(rows: List[Dict[str, object]], output_path: Path) -> None
 
 
 def write_summary_csv(rows: List[Dict[str, object]], output_path: Path) -> None:
-    """Create a summary CSV aggregating token counts per model and decoding method."""
+    """Create a summary CSV aggregating token counts per model, decoding, and beam size."""
 
-    aggregates: Dict[Tuple[str, str], Dict[str, float]] = defaultdict(
+    aggregates: Dict[Tuple[str, str, Optional[int]], Dict[str, float]] = defaultdict(
         lambda: {"count": 0, "avg_input_tokens": 0.0, "avg_output_tokens": 0.0, "avg_total_tokens": 0.0}
     )
 
     for row in rows:
-        key = (row["model"], row["decoding_method"])
+        key = (row["model"], row["decoding_method"], row.get("beam_size"))
         agg = aggregates[key]
         agg["count"] += 1
 
@@ -138,7 +159,12 @@ def write_summary_csv(rows: List[Dict[str, object]], output_path: Path) -> None:
                 agg[avg_key] += token_value
 
     summary_rows = []
-    for (model, decoding_method), agg in sorted(aggregates.items()):
+    def sort_key(item: Tuple[Tuple[str, str, Optional[int]], Dict[str, float]]) -> Tuple[str, str, int]:
+        (model, decoding_method, beam_size), _ = item
+        beam_sort = beam_size if isinstance(beam_size, int) else -1
+        return (model, decoding_method, beam_sort)
+
+    for (model, decoding_method, beam_size), agg in sorted(aggregates.items(), key=sort_key):
         count = agg["count"]
         if not count:
             continue
@@ -146,6 +172,7 @@ def write_summary_csv(rows: List[Dict[str, object]], output_path: Path) -> None:
             {
                 "model": model,
                 "decoding_method": decoding_method,
+                "beam_size": beam_size,
                 "num_problems": count,
                 "avg_input_tokens": round(agg["avg_input_tokens"] / count, 2),
                 "avg_output_tokens": round(agg["avg_output_tokens"] / count, 2),
@@ -160,6 +187,7 @@ def write_summary_csv(rows: List[Dict[str, object]], output_path: Path) -> None:
     fieldnames = [
         "model",
         "decoding_method",
+        "beam_size",
         "num_problems",
         "avg_input_tokens",
         "avg_output_tokens",
@@ -169,7 +197,9 @@ def write_summary_csv(rows: List[Dict[str, object]], output_path: Path) -> None:
     with output_path.open("w", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(summary_rows)
+        for row in summary_rows:
+            row = {key: ("" if value is None else value) for key, value in row.items()}
+            writer.writerow(row)
 
 
 def parse_args() -> argparse.Namespace:
