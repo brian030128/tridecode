@@ -1,0 +1,10 @@
+model,decoding_method,num_problems,avg_input_tokens,avg_output_tokens,avg_total_tokens
+Llama,origin,400,92.8,431.94,524.75
+Llama,sampling,100,92.8,383.68,476.48
+Llama,tree,300,92.8,438.64,531.44
+Mistral,origin,300,88.31,440.93,529.24
+Mistral,sampling,100,88.31,383.24,471.55
+Mistral,tree,200,88.31,441.72,530.03
+PHI3.5,origin,400,86.92,293.7,380.62
+PHI3.5,sampling,100,86.92,271.6,358.52
+PHI3.5,tree,300,86.92,300.23,387.15
